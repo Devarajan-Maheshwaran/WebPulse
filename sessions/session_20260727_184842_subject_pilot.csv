@@ -1,0 +1,27 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-27T18:49:14.959522,32.78,75.76,284.93,0.0,0.0,calm-positive,,It sounds like you're in a very peaceful and content space right now. It's lovely to just relax and take in the quiet sometimes.
+2026-07-27T18:49:32.205774,50.02,72.09,333.04,0.0,0.0,calm-positive,,"I sense a wonderful sense of calm and peace with you right now. Just letting you know I'm here, happy to simply be with you in this moment."
+2026-07-27T18:49:49.985331,67.8,58.88,314.84,0.0,-0.641,calm-negative,,"You seem to be taking a quiet moment to yourself. There's no pressure to talk, but I'm here to listen or just be with you."
+2026-07-27T18:49:50.522881,68.34,123.94,355.33,0.0,0.0,calm-positive,,"[LLM ERROR] Gemini API call failed: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 40.980775232s. [links {
+  description: ""Learn more about Gemini API quotas""
+  url: ""https://ai.google.dev/gemini-api/docs/rate-limits""
+}
+, violations {
+  quota_metric: ""generativelanguage.googleapis.com/generate_content_free_tier_requests""
+  quota_id: ""GenerateRequestsPerDayPerProjectPerModel-FreeTier""
+  quota_dimensions {
+    key: ""model""
+    value: ""gemini-2.5-flash""
+  }
+  quota_dimensions {
+    key: ""location""
+    value: ""global""
+  }
+  quota_value: 20
+}
+, retry_delay {
+  seconds: 40
+}
+]"

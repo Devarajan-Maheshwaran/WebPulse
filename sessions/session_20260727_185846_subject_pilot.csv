@@ -1,0 +1,5 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-27T18:59:11.080887,24.55,60.1,362.4,0.0,0.0,calm-positive,,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-27T18:59:26.881522,40.35,80.04,237.06,0.0,0.0,calm-positive,,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-27T18:59:47.742676,61.21,72.12,333.64,0.0,0.0,calm-positive,,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-27T19:00:06.905133,80.38,56.12,415.51,0.0,0.0,calm-positive,,[Gemini Rate Limit Reached — Waiting for quota reset...]

@@ -1,0 +1,81 @@
+{
+  "session_id": "session_20260727_184055_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-07-27T18:40:55.633854",
+  "duration_seconds": 43.76,
+  "total_records": 6,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-27T18:41:06.019597",
+      "elapsed_seconds": 10.39,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 0.0,
+      "emotion_label": "neutral",
+      "transcript": "",
+      "llm_response": "It seems like you're",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:41:12.664867",
+      "elapsed_seconds": 17.03,
+      "heart_rate_bpm": 60.94,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 0.0,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "It sounds like you'",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:41:18.590607",
+      "elapsed_seconds": 22.96,
+      "heart_rate_bpm": 135.16,
+      "rmssd_ms": 343.88,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "It's",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:41:24.811444",
+      "elapsed_seconds": 29.18,
+      "heart_rate_bpm": 143.47,
+      "rmssd_ms": 553.68,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "It sounds like you're",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:41:30.872212",
+      "elapsed_seconds": 35.24,
+      "heart_rate_bpm": 162.28,
+      "rmssd_ms": 460.64,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "It sounds like you",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:41:37.149909",
+      "elapsed_seconds": 41.52,
+      "heart_rate_bpm": 148.83,
+      "rmssd_ms": 539.94,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "It sounds like you",
+      "raw_signal_summary": {}
+    }
+  ]
+}

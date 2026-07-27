@@ -1,0 +1,11 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-27T18:28:33.236912,6.72,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:28:38.562939,12.05,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:28:44.594756,18.08,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:28:50.610098,24.09,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:28:56.610173,30.09,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:29:02.640767,36.13,,,0.5,0.0,neutral,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:29:08.645465,42.13,91.76,,0.5,0.0,aroused-positive,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:29:14.646208,48.13,99.4,,0.5,0.0,aroused-positive,[ASR Error],"[MOCK LLM RESPONSE - API KEY BLANK] That sounds wonderfully exciting! I can hear the enthusiasm in your voice, and I'm really happy for you."
+2026-07-27T18:29:20.676977,54.16,81.27,184.57,0.0,0.0,calm-positive,[ASR Error],[MOCK LLM RESPONSE - API KEY BLANK] You seem very relaxed and content right now. It is really nice to share a peaceful moment with you.
+2026-07-27T18:29:26.693921,60.18,80.39,182.67,0.0,0.0,calm-positive,[ASR Error],[MOCK LLM RESPONSE - API KEY BLANK] You seem very relaxed and content right now. It is really nice to share a peaceful moment with you.

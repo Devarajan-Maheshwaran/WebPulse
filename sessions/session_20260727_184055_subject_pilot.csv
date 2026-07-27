@@ -1,0 +1,7 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-27T18:41:06.019597,10.39,,,0.5,0.0,neutral,,It seems like you're
+2026-07-27T18:41:12.664867,17.03,60.94,,0.5,0.0,aroused-positive,,It sounds like you'
+2026-07-27T18:41:18.590607,22.96,135.16,343.88,0.0,0.0,calm-positive,,It's
+2026-07-27T18:41:24.811444,29.18,143.47,553.68,0.0,0.0,calm-positive,,It sounds like you're
+2026-07-27T18:41:30.872212,35.24,162.28,460.64,0.0,0.0,calm-positive,,It sounds like you
+2026-07-27T18:41:37.149909,41.52,148.83,539.94,0.0,0.0,calm-positive,,It sounds like you

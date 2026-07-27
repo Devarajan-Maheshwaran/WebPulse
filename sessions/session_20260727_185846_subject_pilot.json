@@ -1,0 +1,57 @@
+{
+  "session_id": "session_20260727_185846_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-07-27T18:58:46.528471",
+  "duration_seconds": 81.51,
+  "total_records": 4,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-27T18:59:11.080887",
+      "elapsed_seconds": 24.55,
+      "heart_rate_bpm": 60.1,
+      "rmssd_ms": 362.4,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:59:26.881522",
+      "elapsed_seconds": 40.35,
+      "heart_rate_bpm": 80.04,
+      "rmssd_ms": 237.06,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T18:59:47.742676",
+      "elapsed_seconds": 61.21,
+      "heart_rate_bpm": 72.12,
+      "rmssd_ms": 333.64,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-27T19:00:06.905133",
+      "elapsed_seconds": 80.38,
+      "heart_rate_bpm": 56.12,
+      "rmssd_ms": 415.51,
+      "arousal_score": 0.0,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    }
+  ]
+}
