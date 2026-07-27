@@ -1,21 +1,30 @@
 """
-llm/transcribe.py — Speech-to-text transcription module.
+llm/transcribe.py — Speech-to-text transcription module using OpenAI Whisper.
 
-Implements FR-6: Speech Transcription using OpenAI Whisper.
-Automatically ensures ffmpeg binary path from imageio-ffmpeg is registered in PATH.
+Implements FR-6: Speech Transcription.
+Automatically ensures ffmpeg binary path from imageio-ffmpeg is registered in PATH,
+and aliases versioned ffmpeg executable to ffmpeg.exe for Windows compatibility.
 """
 
 import os
+import shutil
 import tempfile
 import numpy as np
 
-# Automatically register ffmpeg executable path if available
+# Automatically register ffmpeg executable path and create ffmpeg.exe alias if needed
 try:
     import imageio_ffmpeg
-    ffmpeg_bin_dir = os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg_bin_dir = os.path.dirname(ffmpeg_exe)
+    target_ffmpeg = os.path.join(ffmpeg_bin_dir, "ffmpeg.exe")
+    if not os.path.exists(target_ffmpeg) and os.path.exists(ffmpeg_exe):
+        try:
+            shutil.copyfile(ffmpeg_exe, target_ffmpeg)
+        except Exception:
+            pass
     if ffmpeg_bin_dir not in os.environ.get("PATH", ""):
         os.environ["PATH"] = ffmpeg_bin_dir + os.path.pathsep + os.environ.get("PATH", "")
-except Exception:
+except Exception as e:
     pass
 
 try:

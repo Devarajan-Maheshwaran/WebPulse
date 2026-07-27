@@ -1,5 +1,5 @@
 """
-app.py — Process 3: Fusion + LLM + Session Logging Consumer.
+app.py — Process 3: Fusion + LLM + Session Logging Consumer & HUD Sync.
 
 Runs as Process 3 (Main Entry Point):
   - Connects as a TCP Socket Client to:
@@ -8,6 +8,7 @@ Runs as Process 3 (Main Entry Point):
   - Receives live arousal_score, valence_score, and speech transcripts.
   - Performs Multimodal Emotion Fusion (Russell's Circumplex Model).
   - Triggers Emotion-Aware LLM Response Generation (Gemini/OpenAI/Anthropic) + TTS.
+  - Syncs live HUD updates (Valence, Transcript, Fused Emotion, LLM Response) back to Process 1 GUI.
   - Logs complete session entries into sessions/ directory (CSV & JSON).
 """
 
@@ -25,7 +26,7 @@ from logging_.session_logger import SessionLogger
 
 
 class TCPClientSubscriber:
-    """Client subscriber that connects to a TCP producer server and reads JSON lines."""
+    """Bi-directional Client Subscriber for TCP producer servers."""
 
     def __init__(self, host, port, callback, name="Subscriber"):
         self.host = host
@@ -33,6 +34,8 @@ class TCPClientSubscriber:
         self.callback = callback
         self.name = name
         self.running = False
+        self.sock = None
+        self.lock = threading.Lock()
         self.thread = None
 
     def start(self):
@@ -40,12 +43,23 @@ class TCPClientSubscriber:
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
 
+    def send_hud_update(self, payload_dict):
+        """Send JSON HUD update payload back to the producer server over the connected socket."""
+        with self.lock:
+            if self.sock:
+                try:
+                    msg = (json.dumps(payload_dict) + "\n").encode("utf-8")
+                    self.sock.sendall(msg)
+                except Exception as e:
+                    pass
+
     def _run_loop(self):
         while self.running:
-            sock = None
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((self.host, self.port))
+                with self.lock:
+                    self.sock = sock
                 print(f"[{self.name}] Connected to server at {self.host}:{self.port}")
                 
                 buffer = ""
@@ -63,14 +77,15 @@ class TCPClientSubscriber:
                             except Exception as pe:
                                 print(f"[{self.name}] JSON parse error: {pe}")
             except Exception:
-                # Retry connection after 2 seconds
                 time.sleep(2.0)
             finally:
-                if sock:
-                    try:
-                        sock.close()
-                    except Exception:
-                        pass
+                with self.lock:
+                    if self.sock:
+                        try:
+                            self.sock.close()
+                        except Exception:
+                            pass
+                        self.sock = None
 
     def stop(self):
         self.running = False
@@ -94,7 +109,7 @@ def run_live_fusion_consumer(subject_id="subject_pilot", enable_tts=True):
     latest_rppg = {
         'heart_rate': None,
         'hrv': None,
-        'arousal': 0.5,
+        'arousal': 0.50,
         'face_detected': False
     }
 
@@ -105,12 +120,13 @@ def run_live_fusion_consumer(subject_id="subject_pilot", enable_tts=True):
 
     state_lock = threading.Lock()
     is_llm_busy = False
+    rppg_client = None
 
     def on_rppg_data(data):
         with state_lock:
             latest_rppg['heart_rate'] = data.get('heart_rate')
             latest_rppg['hrv'] = data.get('hrv')
-            latest_rppg['arousal'] = data.get('arousal', 0.5)
+            latest_rppg['arousal'] = data.get('arousal', 0.50)
             latest_rppg['face_detected'] = data.get('face_detected', False)
 
     def on_audio_data(data):
@@ -121,7 +137,18 @@ def run_live_fusion_consumer(subject_id="subject_pilot", enable_tts=True):
             if transcript:
                 latest_audio['transcript'] = transcript
 
-        # Trigger Fusion & LLM on new audio packet if not busy
+            val = latest_audio['valence']
+            trans = latest_audio['transcript']
+
+        # Sync audio metrics immediately to Process 1 GUI HUD
+        if rppg_client:
+            rppg_client.send_hud_update({
+                "type": "hud_update",
+                "valence": val,
+                "transcript": trans
+            })
+
+        # Trigger Fusion & LLM on audio segment
         if not is_llm_busy:
             is_llm_busy = True
             threading.Thread(target=process_fusion_and_llm, daemon=True).start()
@@ -136,17 +163,29 @@ def run_live_fusion_consumer(subject_id="subject_pilot", enable_tts=True):
                 hr = latest_rppg['heart_rate']
                 hrv = latest_rppg['hrv']
 
-            fused_emotion = fuse_emotions(arousal, valence)
+            fused_emotion = fuse_emotions(arousal, valence, hrv_rmssd=hrv)
 
             print("\n" + "=" * 60)
             print(f"[FUSION EVENT] Triggered Multimodal Emotion Analysis")
             print(f"  Physiological Arousal: {arousal:.2f} | Voice Valence: {valence:+.2f}")
-            print(f"  Fused Emotion State:   '{fused_emotion['label']}'")
+            print(f"  Fused Emotion State:   '{fused_emotion['label']}' ({fused_emotion['stress_label']})")
             print(f"  User Transcript:       '{transcript or '(No speech transcribed)'}'")
 
             response_text = llm_gen.generate_response(fused_emotion, transcript)
             print(f"[LLM RESPONSE] \"{response_text}\"")
             print("=" * 60 + "\n")
+
+            # Sync complete fused emotion & LLM response output back to Process 1 HUD GUI
+            if rppg_client:
+                rppg_client.send_hud_update({
+                    "type": "hud_update",
+                    "valence": valence,
+                    "transcript": transcript,
+                    "emotion_label": fused_emotion['label'],
+                    "emotion_desc": fused_emotion['description'],
+                    "stress_label": fused_emotion['stress_label'],
+                    "llm_response": response_text
+                })
 
             if enable_tts and tts is not None and response_text and not response_text.startswith("["):
                 tts.speak(response_text)

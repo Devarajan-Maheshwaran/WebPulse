@@ -47,6 +47,22 @@ class HRSmoother:
         return float(self.last_smoothed)
 
 
+class ArousalSmoother:
+    """
+    Exponential moving average (EMA) filter for physiological arousal score.
+    Prevents abrupt drop-offs to 0.0 or freeze.
+    """
+    def __init__(self, alpha=0.2):
+        self.alpha = alpha
+        self.last_arousal = 0.50
+
+    def update(self, raw_arousal):
+        if raw_arousal is None:
+            return self.last_arousal
+        self.last_arousal = self.alpha * raw_arousal + (1 - self.alpha) * self.last_arousal
+        return float(np.clip(self.last_arousal, 0.05, 0.95))
+
+
 def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
     """
     Estimate heart rate in BPM using FFT spectral power peak detection.
@@ -111,24 +127,22 @@ def compute_rmssd(peak_indices, fps):
     return float(rmssd)
 
 
-def map_hrv_to_arousal(rmssd, baseline_min_rmssd=15.0, baseline_max_rmssd=80.0):
+def map_hrv_to_arousal(rmssd, baseline_min_rmssd=10.0, baseline_max_rmssd=100.0):
     """
-    Map RMSSD HRV metric to a continuous Arousal / Physiological Stress Score in [0.0, 1.0].
+    Map RMSSD HRV metric to a continuous Arousal / Physiological Stress Score in [0.05, 0.95].
     
     Theoretical Framing (Sugaya Lab & PRV Emotion Papers):
       - Lower RMSSD (high stress / sympathetic tone) -> Arousal Score closer to 1.0
       - Higher RMSSD (calm / parasympathetic vagal tone) -> Arousal Score closer to 0.0
-      
-    NOTE: Default baseline thresholds (15ms - 80ms) require empirical calibration on real session logs!
     """
-    if rmssd is None:
-        return 0.5
+    if rmssd is None or rmssd <= 0:
+        return 0.50
 
     clamped_rmssd = max(baseline_min_rmssd, min(baseline_max_rmssd, rmssd))
     normalized_calm = (clamped_rmssd - baseline_min_rmssd) / (baseline_max_rmssd - baseline_min_rmssd)
     arousal_score = 1.0 - normalized_calm
 
-    return float(np.clip(arousal_score, 0.0, 1.0))
+    return float(np.clip(arousal_score, 0.05, 0.95))
 
 
 def classify_stress(rmssd, calm_thresh=50.0, stress_thresh=25.0):

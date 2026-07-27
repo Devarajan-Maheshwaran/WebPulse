@@ -1,13 +1,15 @@
 """
-rppg/rppg_server.py — Process 1: Video Capture & rPPG Producer Server.
+rppg/rppg_server.py — Process 1: Video Capture, rPPG Producer Server & Live HUD Interface.
 
 Runs as Process 1:
   - Captures webcam frames & detects face ROI (MediaPipe / Haar Cascade).
   - Extracts green-channel signal, detrends, bandpass filters, and estimates:
       - heart_rate (BPM)
       - hrv (RMSSD in ms)
-      - arousal_score [0.0, 1.0]
+      - arousal_score [0.05, 0.95]
   - Hosts a TCP Socket Server on localhost:5001 broadcasting rPPG metrics as JSON lines.
+  - Receives live HUD update payloads from Process 3 (app.py) over TCP socket.
+  - Renders complete WebPulse visual overlay interface using rppg.hud.
 """
 
 import sys
@@ -24,15 +26,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from rppg.capture import FaceROICapturer
 from rppg.signal import extract_roi_green_channel, detrend_signal, butterworth_bandpass_filter
-from rppg.hrv import estimate_heart_rate_fft, find_pulse_peaks, compute_rmssd, map_hrv_to_arousal, HRSmoother
+from rppg.hrv import estimate_heart_rate_fft, find_pulse_peaks, compute_rmssd, map_hrv_to_arousal, classify_stress, HRSmoother, ArousalSmoother
+from rppg.hud import draw_overlay_hud
 
 
 class RPPGTCPServer:
-    """Simple multi-client TCP Socket Server for broadcasting rPPG data."""
+    """Bi-directional TCP Socket Server for broadcasting rPPG metrics & receiving HUD updates."""
 
-    def __init__(self, host="127.0.0.1", port=5001):
+    def __init__(self, host="127.0.0.1", port=5001, on_hud_update=None):
         self.host = host
         self.port = port
+        self.on_hud_update = on_hud_update
         self.clients = []
         self.lock = threading.Lock()
         self.running = False
@@ -56,6 +60,29 @@ class RPPGTCPServer:
                 with self.lock:
                     self.clients.append(client_sock)
                 print(f"[rPPG Server] Client connected from {addr}")
+
+                recv_thread = threading.Thread(target=self._client_recv_loop, args=(client_sock,), daemon=True)
+                recv_thread.start()
+            except Exception:
+                break
+
+    def _client_recv_loop(self, client_sock):
+        buffer = ""
+        while self.running:
+            try:
+                data = client_sock.recv(1024).decode("utf-8")
+                if not data:
+                    break
+                buffer += data
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    if line.strip():
+                        try:
+                            payload = json.loads(line.strip())
+                            if payload.get("type") == "hud_update" and self.on_hud_update:
+                                self.on_hud_update(payload)
+                        except Exception:
+                            pass
             except Exception:
                 break
 
@@ -86,11 +113,40 @@ class RPPGTCPServer:
 
 def run_rppg_server():
     print("=" * 70)
-    print("  Process 1: WebPulse rPPG Producer Server (localhost:5001)")
+    print("  Process 1: WebPulse rPPG Producer & Visual Interface Server (localhost:5001)")
     print("=" * 70)
     print("Press 'q' in video window to stop server.\n")
 
-    server = RPPGTCPServer(host="127.0.0.1", port=5001)
+    hud_state = {
+        "heart_rate": None,
+        "rmssd": None,
+        "arousal": 0.50,
+        "valence": 0.0,
+        "stress_label": "NORMAL",
+        "emotion_label": "calm-positive",
+        "emotion_desc": "Low arousal & positive valence",
+        "transcript": "",
+        "llm_response": "",
+        "face_detected": False
+    }
+    hud_lock = threading.Lock()
+
+    def update_hud_from_client(payload):
+        with hud_lock:
+            if "valence" in payload:
+                hud_state["valence"] = payload["valence"]
+            if "transcript" in payload:
+                hud_state["transcript"] = payload["transcript"]
+            if "emotion_label" in payload:
+                hud_state["emotion_label"] = payload["emotion_label"]
+            if "emotion_desc" in payload:
+                hud_state["emotion_desc"] = payload["emotion_desc"]
+            if "stress_label" in payload:
+                hud_state["stress_label"] = payload["stress_label"]
+            if "llm_response" in payload:
+                hud_state["llm_response"] = payload["llm_response"]
+
+    server = RPPGTCPServer(host="127.0.0.1", port=5001, on_hud_update=update_hud_from_client)
     server.start()
 
     video_capturer = FaceROICapturer(camera_index=0)
@@ -100,15 +156,18 @@ def run_rppg_server():
         return
 
     hr_smoother = HRSmoother(history_size=5, alpha=0.3)
+    arousal_smoother = ArousalSmoother(alpha=0.2)
+
     raw_g_signal = []
     fps_estimate = 30.0
     start_time = time.time()
     last_broadcast_time = 0
     frame_count = 0
 
-    cv2.namedWindow("webpulse - rPPG Video Producer", cv2.WINDOW_NORMAL)
+    window_title = "webpulse - Multimodal Emotion Companion"
+    cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
     try:
-        cv2.setWindowProperty("webpulse - rPPG Video Producer", cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowProperty(window_title, cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
     except Exception:
         pass
 
@@ -137,9 +196,6 @@ def run_rppg_server():
                 g_val = extract_roi_green_channel(roi_crop)
                 if g_val is not None:
                     raw_g_signal.append(g_val)
-            else:
-                cv2.putText(display_frame, "[SEARCHING FOR FACE]", (20, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
             elapsed = time.time() - start_time
             if elapsed > 0:
@@ -151,7 +207,7 @@ def run_rppg_server():
 
             current_hr = None
             current_rmssd = None
-            current_arousal = 0.5
+            raw_arousal = 0.50
 
             if len(raw_g_signal) >= int(fps_estimate * 3):
                 detrended = detrend_signal(raw_g_signal)
@@ -162,7 +218,18 @@ def run_rppg_server():
                 
                 peaks = find_pulse_peaks(filtered, fps=fps_estimate)
                 current_rmssd = compute_rmssd(peaks, fps=fps_estimate)
-                current_arousal = map_hrv_to_arousal(current_rmssd)
+                raw_arousal = map_hrv_to_arousal(current_rmssd)
+
+            smoothed_arousal = arousal_smoother.update(raw_arousal)
+            stress_label, _ = classify_stress(current_rmssd)
+
+            with hud_lock:
+                hud_state["heart_rate"] = current_hr
+                hud_state["rmssd"] = current_rmssd
+                hud_state["arousal"] = smoothed_arousal
+                hud_state["stress_label"] = stress_label
+                hud_state["face_detected"] = face_detected
+                current_hud_snapshot = hud_state.copy()
 
             # Broadcast metrics over TCP every 1 second
             now = time.time()
@@ -172,20 +239,18 @@ def run_rppg_server():
                     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
                     "heart_rate": current_hr,
                     "hrv": current_rmssd,
-                    "arousal": current_arousal,
+                    "arousal": smoothed_arousal,
                     "face_detected": face_detected
                 }
                 server.broadcast(payload)
                 
                 hr_str = f"{current_hr:.1f} BPM" if current_hr else "Calibrating..."
-                print(f"[rPPG Server] Sent -> HR: {hr_str} | Arousal: {current_arousal:.2f} | Face: {face_detected}")
+                print(f"[rPPG Server] Sent -> HR: {hr_str} | Arousal: {smoothed_arousal:.2f} | Face: {face_detected}")
 
-            # Draw Overlay Info
-            hr_disp = f"HR: {current_hr:.1f} BPM" if current_hr else "HR: Calibrating..."
-            cv2.putText(display_frame, hr_disp, (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-            cv2.putText(display_frame, f"Arousal: {current_arousal:.2f}", (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+            # Draw FULL WEBPULSE HUD OVERLAY INTERFACE
+            display_frame = draw_overlay_hud(display_frame, current_hud_snapshot)
 
-            cv2.imshow("webpulse - rPPG Video Producer", display_frame)
+            cv2.imshow(window_title, display_frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
