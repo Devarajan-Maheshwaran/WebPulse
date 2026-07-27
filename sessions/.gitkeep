@@ -1,0 +1,3 @@
+# This directory stores logged pilot session data (CSV/JSON).
+# Each session gets its own timestamped subdirectory or file.
+# Do NOT commit real session data to version control without consent review.

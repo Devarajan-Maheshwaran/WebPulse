@@ -1,0 +1,37 @@
+# =============================================================================
+# WebPulse — Python Dependencies
+# =============================================================================
+# Install with:  pip install -r requirements.txt
+# Recommended:   Use a virtual environment (venv) first.
+# =============================================================================
+
+# --- Core / Scientific Computing ---
+numpy>=1.24,<2.0
+scipy>=1.10
+
+# --- Video / Computer Vision ---
+opencv-python>=4.8
+mediapipe>=0.10
+
+# --- Audio / Signal Processing ---
+librosa>=0.10
+sounddevice>=0.4           # Real-time microphone capture
+soundfile>=0.12            # Audio file I/O (needed by sounddevice/librosa)
+
+# --- ASR (Speech-to-Text) ---
+# Using OpenAI Whisper (local model — runs on CPU, no API key needed).
+# For GPU acceleration, install torch with CUDA separately first.
+openai-whisper>=20231117
+
+# --- LLM Client Libraries ---
+openai>=1.0                # For OpenAI GPT API
+anthropic>=0.25            # For Anthropic Claude API
+
+# --- TTS (Text-to-Speech) ---
+pyttsx3>=2.90              # Local TTS engine (no API key needed)
+
+# --- Environment / Config ---
+python-dotenv>=1.0         # Load .env files
+
+# --- Plotting (for standalone test/debug scripts) ---
+matplotlib>=3.7
