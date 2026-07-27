@@ -20,15 +20,7 @@ class TTSEngine:
     def __init__(self, rate=150, volume=0.9):
         self.rate = rate
         self.volume = volume
-        self.engine = None
-        if HAS_PYTTSX3:
-            try:
-                self.engine = pyttsx3.init()
-                self.engine.setProperty('rate', self.rate)
-                self.engine.setProperty('volume', self.volume)
-            except Exception as e:
-                print(f"[WARNING] pyttsx3 initialization failed: {e}")
-                self.engine = None
+        self.engine = HAS_PYTTSX3
 
     def speak(self, text):
         """
@@ -43,10 +35,13 @@ class TTSEngine:
         if not text or not text.strip():
             return False
 
-        if self.engine is not None:
+        if HAS_PYTTSX3:
             try:
-                self.engine.say(text)
-                self.engine.runAndWait()
+                engine = pyttsx3.init()
+                engine.setProperty('rate', self.rate)
+                engine.setProperty('volume', self.volume)
+                engine.say(text)
+                engine.runAndWait()
                 return True
             except Exception as e:
                 print(f"[ERROR] TTS speech execution error: {e}")

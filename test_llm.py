@@ -39,7 +39,12 @@ def test_llm_pipeline():
 
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    has_real_key = bool(openai_key and not openai_key.startswith("your-")) or bool(anthropic_key and not anthropic_key.startswith("your-"))
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    has_real_key = (
+        bool(openai_key and not openai_key.startswith("your-")) or
+        bool(anthropic_key and not anthropic_key.startswith("your-")) or
+        bool(gemini_key and not gemini_key.startswith("your-"))
+    )
 
     if has_real_key:
         print("[API KEY DETECTED] Calling live LLM API...")

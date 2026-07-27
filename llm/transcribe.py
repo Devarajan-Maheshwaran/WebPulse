@@ -2,10 +2,21 @@
 llm/transcribe.py — Speech-to-text transcription module.
 
 Implements FR-6: Speech Transcription using OpenAI Whisper.
+Automatically ensures ffmpeg binary path from imageio-ffmpeg is registered in PATH.
 """
 
+import os
 import tempfile
 import numpy as np
+
+# Automatically register ffmpeg executable path if available
+try:
+    import imageio_ffmpeg
+    ffmpeg_bin_dir = os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+    if ffmpeg_bin_dir not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = ffmpeg_bin_dir + os.path.pathsep + os.environ.get("PATH", "")
+except Exception:
+    pass
 
 try:
     import soundfile as sf
@@ -50,13 +61,22 @@ class SpeechTranscriber:
             return ""
 
         if not self.load_model():
-            return "[ASR Mock: Audio detected, Whisper model not active]"
+            return ""
 
+        tmp_path = None
         try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp_file:
-                sf.write(tmp_file.name, audio_data, sr)
-                result = self.model.transcribe(tmp_file.name, fp16=False)
-                return result.get("text", "").strip()
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+            
+            sf.write(tmp_path, audio_data, sr)
+            result = self.model.transcribe(tmp_path, fp16=False)
+            return result.get("text", "").strip()
         except Exception as e:
             print(f"[ERROR] Whisper transcription error: {e}")
-            return "[ASR Error]"
+            return ""
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass

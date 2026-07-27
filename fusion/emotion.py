@@ -1,18 +1,19 @@
 """
-fusion/emotion.py — Emotion Fusion Module (Russell's Circumplex Model).
+fusion/emotion.py — Emotion Fusion Module (Russell's Circumplex Model + Sugaya Stress Classification).
 
-Implements FR-5: Emotion Fusion.
-Combines (arousal, valence) scores into one of four emotion-quadrant labels:
-  - Quadrant 1: High Arousal, Positive Valence -> "aroused-positive" (Excited / Happy)
-  - Quadrant 2: High Arousal, Negative Valence -> "aroused-negative" (Stressed / Angry / Anxious)
-  - Quadrant 3: Low Arousal, Positive Valence  -> "calm-positive"    (Relaxed / Content)
-  - Quadrant 4: Low Arousal, Negative Valence  -> "calm-negative"    (Sad / Bored / Depressed)
+RESEARCH REFERENCES:
+1. Russell, J. A. (1980). "A circumplex model of affect." Journal of Personality and Social Psychology.
+   - Maps emotional state across two orthogonal axes: Arousal (physiological activation) and Valence (emotional tone).
+2. Sugaya et al. & PRV Emotion Papers:
+   - Integrates discrete stress classification (CALM, NORMAL, STRESSED) derived from HRV RMSSD metrics.
 """
+
+from rppg.hrv import classify_stress
 
 
 class EmotionFuser:
     """
-    Fuses arousal and valence scores per Russell's Circumplex Model of Affect.
+    Fuses physiological arousal and voice valence per Russell's Circumplex Model of Affect.
     """
 
     QUADRANT_DESCRIPTIONS = {
@@ -26,23 +27,24 @@ class EmotionFuser:
         self.arousal_threshold = arousal_threshold
         self.valence_threshold = valence_threshold
 
-    def fuse(self, arousal_score, valence_score):
+    def fuse(self, arousal_score, valence_score, hrv_rmssd=None):
         """
-        Map continuous (arousal, valence) pair to emotion label & metadata.
+        Map continuous (arousal, valence) pair to emotion quadrant & stress label.
         
         Args:
-            arousal_score (float): Physiological arousal/stress score [0.0, 1.0].
+            arousal_score (float): Physiological arousal score [0.0, 1.0].
             valence_score (float): Voice tone valence score [-1.0, 1.0].
+            hrv_rmssd (float, optional): RMSSD HRV metric in ms for Sugaya stress classification.
             
         Returns:
             dict: {
                 "arousal": float,
                 "valence": float,
                 "label": str,
+                "stress_label": str,
                 "description": str
             }
         """
-        # Clamp inputs to valid ranges
         a = float(max(0.0, min(1.0, arousal_score if arousal_score is not None else 0.5)))
         v = float(max(-1.0, min(1.0, valence_score if valence_score is not None else 0.0)))
 
@@ -58,15 +60,18 @@ class EmotionFuser:
         else:
             label = "calm-negative"
 
+        stress_label, _ = classify_stress(hrv_rmssd)
+
         return {
             "arousal": round(a, 3),
             "valence": round(v, 3),
             "label": label,
+            "stress_label": stress_label,
             "description": self.QUADRANT_DESCRIPTIONS[label]
         }
 
 
-def fuse_emotions(arousal_score, valence_score, arousal_threshold=0.5, valence_threshold=0.0):
+def fuse_emotions(arousal_score, valence_score, hrv_rmssd=None, arousal_threshold=0.5, valence_threshold=0.0):
     """Convenience helper function for emotion fusion."""
     fuser = EmotionFuser(arousal_threshold=arousal_threshold, valence_threshold=valence_threshold)
-    return fuser.fuse(arousal_score, valence_score)
+    return fuser.fuse(arousal_score, valence_score, hrv_rmssd=hrv_rmssd)

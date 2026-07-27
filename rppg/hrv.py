@@ -1,43 +1,66 @@
 """
-rppg/hrv.py — Heart rate and HRV/arousal estimation module.
+rppg/hrv.py — Heart Rate, HRV (RMSSD), and Sugaya-Style Arousal/Stress Classification.
 
-Implements FR-3: Heart Rate and HRV/Arousal Estimation.
-- Rolling window FFT peak detection for Heart Rate (BPM).
-- Peak-to-peak inter-beat interval (IBI) analysis & RMSSD-style HRV metric.
-- HRV -> Arousal/Stress score mapping with configurable thresholds.
+RESEARCH REFERENCES & THEORETICAL MOTIVATION:
+1. Sugaya et al.
+   "Emotion estimation from EEG and HRV indices with Machine Learning."
+   - Established that Heart Rate Variability (HRV) metrics (specifically RMSSD) strongly reflect
+     autonomic nervous system (ANS) activation and physiological stress/arousal.
+   - Lower HRV (RMSSD) corresponds to higher sympathetic arousal / physiological stress.
+   - Higher HRV (RMSSD) corresponds to parasympathetic vagal dominance / calm state.
 
-NOTE: Thresholds used in map_hrv_to_arousal are initial guesses and MUST be calibrated
-from real pilot test session data.
+2. Camera-Based PRV Emotion Recognition (2023).
+   "Dimensional emotion recognition from camera-based pulse rate variability (PRV) features."
+   - Validates that remote camera-extracted pulse rate variability (PRV) serves as a valid 1D proxy
+     for the physiological arousal dimension in dimensional emotion models (Russell Circumplex).
 """
 
 import numpy as np
 from scipy import signal as sp_signal
 
 
-def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=42.0, max_bpm=180.0):
+class HRSmoother:
+    """
+    Smoothing and outlier rejection filter for rPPG Heart Rate estimates.
+    """
+    def __init__(self, history_size=5, alpha=0.3):
+        self.history_size = history_size
+        self.alpha = alpha
+        self.history = []
+        self.last_smoothed = None
+
+    def update(self, raw_bpm):
+        if raw_bpm is None or not (50.0 <= raw_bpm <= 140.0):
+            return self.last_smoothed
+
+        self.history.append(raw_bpm)
+        if len(self.history) > self.history_size:
+            self.history.pop(0)
+
+        median_bpm = float(np.median(self.history))
+
+        if self.last_smoothed is None:
+            self.last_smoothed = median_bpm
+        else:
+            self.last_smoothed = self.alpha * median_bpm + (1 - self.alpha) * self.last_smoothed
+
+        return float(self.last_smoothed)
+
+
+def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
     """
     Estimate heart rate in BPM using FFT spectral power peak detection.
-    
-    Args:
-        filtered_signal (array-like): Bandpass-filtered signal window.
-        fps (float): Sampling frame rate in FPS.
-        min_bpm (float): Minimum valid heart rate (default 42 BPM = 0.7 Hz).
-        max_bpm (float): Maximum valid heart rate (default 180 BPM = 3.0 Hz).
-        
-    Returns:
-        float: Estimated heart rate in BPM, or None if signal is insufficient.
+    Reference: Poh et al. (2012).
     """
     sig = np.array(filtered_signal, dtype=np.float64)
     n = len(sig)
-    if n < 30 or fps <= 0:
+    if n < 45 or fps <= 0:
         return None
 
-    # Compute FFT
     fft_vals = np.fft.rfft(sig * np.hanning(n))
     fft_freqs = np.fft.rfftfreq(n, d=1.0 / fps)
     fft_power = np.abs(fft_vals) ** 2
 
-    # Filter frequencies to [min_bpm/60, max_bpm/60]
     min_hz = min_bpm / 60.0
     max_hz = max_bpm / 60.0
 
@@ -51,22 +74,14 @@ def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=42.0, max_bpm=180.0):
     return float(bpm)
 
 
-def find_pulse_peaks(filtered_signal, fps, min_bpm=42.0, max_bpm=180.0):
+def find_pulse_peaks(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
     """
     Locate peak indices in filtered signal corresponding to individual heartbeats.
-    
-    Args:
-        filtered_signal (array-like): Bandpass-filtered signal window.
-        fps (float): Sampling frame rate in FPS.
-        
-    Returns:
-        ndarray: Indices of detected systolic peaks.
     """
     sig = np.array(filtered_signal, dtype=np.float64)
     if len(sig) < 15 or fps <= 0:
         return np.array([], dtype=int)
 
-    # Minimum distance between peaks in samples (based on max_bpm)
     min_dist_samples = int((60.0 / max_bpm) * fps)
     min_dist_samples = max(1, min_dist_samples)
 
@@ -80,23 +95,14 @@ def find_pulse_peaks(filtered_signal, fps, min_bpm=42.0, max_bpm=180.0):
 
 def compute_rmssd(peak_indices, fps):
     """
-    Compute Root Mean Square of Successive Differences (RMSSD) of inter-beat intervals.
-    
-    Args:
-        peak_indices (array-like): Indices of detected heartbeat peaks.
-        fps (float): Sampling rate in FPS.
-        
-    Returns:
-        float: RMSSD in milliseconds (ms), or None if insufficient peaks.
+    Compute Root Mean Square of Successive Differences (RMSSD) of inter-beat intervals (IBI).
+    Formula: RMSSD = sqrt( mean( (RR_i+1 - RR_i)^2 ) )
     """
     if len(peak_indices) < 3 or fps <= 0:
         return None
 
-    # Convert peak frame differences to milliseconds
     rrs_ms = np.diff(peak_indices) / fps * 1000.0
-    
-    # Filter physiologically unrealistic RR intervals (e.g. outside 300ms–1400ms)
-    valid_rrs = rrs_ms[(rrs_ms >= 300.0) & (rrs_ms <= 1400.0)]
+    valid_rrs = rrs_ms[(rrs_ms >= 400.0) & (rrs_ms <= 1200.0)]
     if len(valid_rrs) < 2:
         return None
 
@@ -107,31 +113,43 @@ def compute_rmssd(peak_indices, fps):
 
 def map_hrv_to_arousal(rmssd, baseline_min_rmssd=15.0, baseline_max_rmssd=80.0):
     """
-    Map RMSSD HRV metric to a continuous Arousal / Physiological Stress Score [0.0, 1.0].
+    Map RMSSD HRV metric to a continuous Arousal / Physiological Stress Score in [0.0, 1.0].
     
-    Physiological Framing (Sugaya's lab alignment):
-      - Lower HRV (RMSSD) -> Higher arousal / physiological stress.
-      - Higher HRV (RMSSD) -> Lower arousal / high vagal tone.
-
-    NOTE: The default baseline thresholds (15ms - 80ms) are an INITIAL GUESS
-    and NEED CALIBRATION from real pilot data.
-
-    Args:
-        rmssd (float): RMSSD in milliseconds.
-        baseline_min_rmssd (float): RMSSD threshold corresponding to max arousal (default: 15.0 ms).
-        baseline_max_rmssd (float): RMSSD threshold corresponding to min arousal (default: 80.0 ms).
-        
-    Returns:
-        float: Arousal score in range [0.0, 1.0], where 1.0 = High Stress/Arousal.
+    Theoretical Framing (Sugaya Lab & PRV Emotion Papers):
+      - Lower RMSSD (high stress / sympathetic tone) -> Arousal Score closer to 1.0
+      - Higher RMSSD (calm / parasympathetic vagal tone) -> Arousal Score closer to 0.0
+      
+    NOTE: Default baseline thresholds (15ms - 80ms) require empirical calibration on real session logs!
     """
     if rmssd is None:
-        return 0.5  # Neutral default when uncalibrated/unavailable
+        return 0.5
 
-    # Clamp RMSSD to expected baseline range
     clamped_rmssd = max(baseline_min_rmssd, min(baseline_max_rmssd, rmssd))
-
-    # Invert scale: lower RMSSD -> higher arousal
     normalized_calm = (clamped_rmssd - baseline_min_rmssd) / (baseline_max_rmssd - baseline_min_rmssd)
     arousal_score = 1.0 - normalized_calm
 
     return float(np.clip(arousal_score, 0.0, 1.0))
+
+
+def classify_stress(rmssd, calm_thresh=50.0, stress_thresh=25.0):
+    """
+    Classify physiological stress state into 3 discrete states based on HRV RMSSD.
+    Inspired by Sugaya Lab HRV feature classification.
+    
+    Args:
+        rmssd (float): Computed RMSSD in ms.
+        calm_thresh (float): RMSSD threshold above which state is CALM (default: 50.0 ms).
+        stress_thresh (float): RMSSD threshold below which state is STRESSED (default: 25.0 ms).
+        
+    Returns:
+        tuple (str, str): (Stress Label, Arousal Category) e.g. ("CALM", "LOW AROUSAL")
+    """
+    if rmssd is None:
+        return "NORMAL", "MODERATE AROUSAL"
+
+    if rmssd >= calm_thresh:
+        return "CALM", "LOW AROUSAL"
+    elif rmssd < stress_thresh:
+        return "STRESSED", "HIGH AROUSAL"
+    else:
+        return "NORMAL", "MODERATE AROUSAL"

@@ -26,6 +26,7 @@ openai-whisper>=20231117
 # --- LLM Client Libraries ---
 openai>=1.0                # For OpenAI GPT API
 anthropic>=0.25            # For Anthropic Claude API
+google-generativeai>=0.4.0 # For Google Gemini API
 
 # --- TTS (Text-to-Speech) ---
 pyttsx3>=2.90              # Local TTS engine (no API key needed)

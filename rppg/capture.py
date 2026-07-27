@@ -38,21 +38,25 @@ class FaceROICapturer:
             self.face_mesh = mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
+                min_detection_confidence=0.3,
+                min_tracking_confidence=0.3
             )
 
         # Haar Cascade Fallback initialization
         self.haar_cascade = None
         if fallback_haar:
-            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-            self.haar_cascade = cv2.CascadeClassifier(cascade_path)
+            import os
+            cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+            cascade = cv2.CascadeClassifier(cascade_path)
+            if not cascade.empty():
+                self.haar_cascade = cascade
+            else:
+                print(f"[WARNING] Could not load Haar cascade from {cascade_path}")
 
     def start(self):
         """Initialize the video capture stream."""
         self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW if cv2.os.name == 'nt' else cv2.CAP_ANY)
         if not self.cap.isOpened():
-            # Try default backend without CAP_DSHOW
             self.cap = cv2.VideoCapture(self.camera_index)
         
         if self.cap.isOpened():
@@ -76,15 +80,16 @@ class FaceROICapturer:
 
     def extract_roi(self, frame):
         """
-        Detect face and extract ROI bounding box (forehead / upper face region).
+        Detect face and extract ROI bounding boxes.
         
         Returns:
-            roi_crop: Crop of ROI region from frame (or None if lost)
-            roi_box: (x, y, w, h) bounding box
+            roi_crop: Crop of forehead ROI region for rPPG green channel signal (or None if lost)
+            full_face_box: (x, y, w, h) bounding box of the entire face
+            roi_box: (x, y, w, h) bounding box of forehead ROI
             detection_method: 'mediapipe', 'haar', or None
         """
         if frame is None:
-            return None, None, None
+            return None, None, None, None
 
         h, w, c = frame.shape
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -95,7 +100,16 @@ class FaceROICapturer:
             if results.multi_face_landmarks:
                 landmarks = results.multi_face_landmarks[0].landmark
                 
-                # MediaPipe Forehead Landmark Indices: 10, 67, 109, 338, 297, 332
+                # Full face bounding box from all landmarks
+                all_xs = [int(lm.x * w) for lm in landmarks]
+                all_ys = [int(lm.y * h) for lm in landmarks]
+                
+                fx_min, fx_max = max(0, min(all_xs)), min(w, max(all_xs))
+                fy_min, fy_max = max(0, min(all_ys)), min(h, max(all_ys))
+                
+                full_face_box = (fx_min, fy_min, fx_max - fx_min, fy_max - fy_min)
+
+                # Forehead ROI Landmark Indices for rPPG green signal
                 forehead_indices = [10, 67, 109, 338, 297, 332, 21, 251]
                 xs = [int(landmarks[idx].x * w) for idx in forehead_indices]
                 ys = [int(landmarks[idx].y * h) for idx in forehead_indices]
@@ -106,17 +120,19 @@ class FaceROICapturer:
                 roi_w = max_x - min_x
                 roi_h = max_y - min_y
 
-                if roi_w > 10 and roi_h > 10:
+                if roi_w > 5 and roi_h > 5:
                     roi_crop = frame[min_y:max_y, min_x:max_x]
-                    return roi_crop, (min_x, min_y, roi_w, roi_h), 'mediapipe'
+                    roi_box = (min_x, min_y, roi_w, roi_h)
+                    return roi_crop, full_face_box, roi_box, 'mediapipe'
 
         # 2. Fallback: Haar Cascade
         if self.haar_cascade is not None:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = self.haar_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+            faces = self.haar_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(80, 80))
             if len(faces) > 0:
                 fx, fy, fw, fh = faces[0]
-                # Forehead estimate: upper 20-40% of the face rectangle
+                full_face_box = (fx, fy, fw, fh)
+
                 roi_x = fx + int(fw * 0.25)
                 roi_y = fy + int(fh * 0.10)
                 roi_w = int(fw * 0.50)
@@ -127,8 +143,9 @@ class FaceROICapturer:
                 roi_w = min(w - roi_x, roi_w)
                 roi_h = min(h - roi_y, roi_h)
 
-                if roi_w > 10 and roi_h > 10:
+                if roi_w > 5 and roi_h > 5:
                     roi_crop = frame[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
-                    return roi_crop, (roi_x, roi_y, roi_w, roi_h), 'haar'
+                    roi_box = (roi_x, roi_y, roi_w, roi_h)
+                    return roi_crop, full_face_box, roi_box, 'haar'
 
-        return None, None, None
+        return None, None, None, None
