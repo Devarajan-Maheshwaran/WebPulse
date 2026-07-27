@@ -1,9 +1,56 @@
 """
-llm/tts.py — Text-to-speech output.
+llm/tts.py — Text-to-Speech synthesis output module.
 
-Implements FR-8: Response Output (optional TTS).
-Converts LLM-generated response text to spoken audio
-using pyttsx3 or an alternative TTS engine.
-
-Status: STUB — To be implemented in Phase 5.
+Implements FR-8: Response Output (TTS).
+Uses pyttsx3 for offline speech synthesis.
 """
+
+try:
+    import pyttsx3
+    HAS_PYTTSX3 = True
+except ImportError:
+    HAS_PYTTSX3 = False
+
+
+class TTSEngine:
+    """
+    Offline Text-to-Speech Engine wrapper around pyttsx3.
+    """
+
+    def __init__(self, rate=150, volume=0.9):
+        self.rate = rate
+        self.volume = volume
+        self.engine = None
+        if HAS_PYTTSX3:
+            try:
+                self.engine = pyttsx3.init()
+                self.engine.setProperty('rate', self.rate)
+                self.engine.setProperty('volume', self.volume)
+            except Exception as e:
+                print(f"[WARNING] pyttsx3 initialization failed: {e}")
+                self.engine = None
+
+    def speak(self, text):
+        """
+        Synthesize text response to spoken audio.
+        
+        Args:
+            text (str): Response text to speak.
+            
+        Returns:
+            bool: True if speech was executed, False otherwise.
+        """
+        if not text or not text.strip():
+            return False
+
+        if self.engine is not None:
+            try:
+                self.engine.say(text)
+                self.engine.runAndWait()
+                return True
+            except Exception as e:
+                print(f"[ERROR] TTS speech execution error: {e}")
+                return False
+        else:
+            print(f"[TTS DISABLED / DISPLAY ONLY] Output text: '{text}'")
+            return False
