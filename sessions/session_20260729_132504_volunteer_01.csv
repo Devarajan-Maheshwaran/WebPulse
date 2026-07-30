@@ -1,0 +1,2 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-29T13:26:23.612101,79.28,87.01,139.69,0.627,0.28,calm-positive,that area野endes is if the reason I don't know t,"It sounds like you're feeling quite relaxed right now, though I'm having a little trouble catching the end of your thought. I’m here whenever you’d like to pick that back up or just share what’s on your mind."

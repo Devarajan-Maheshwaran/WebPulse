@@ -63,10 +63,11 @@ class ArousalSmoother:
         return float(np.clip(self.last_arousal, 0.05, 0.95))
 
 
-def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
+def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=50.0, max_bpm=120.0):
     """
-    Estimate heart rate in BPM using FFT spectral power peak detection.
-    Reference: Poh et al. (2012).
+    Estimate heart rate in BPM using FFT spectral power peak detection
+    with harmonic suppression to prevent 2x second-harmonic doubling artifacts.
+    Reference: Poh et al. (2012), pyVHR.
     """
     sig = np.array(filtered_signal, dtype=np.float64)
     n = len(sig)
@@ -84,10 +85,28 @@ def estimate_heart_rate_fft(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
     if len(valid_idx) == 0:
         return None
 
-    peak_sub_idx = np.argmax(fft_power[valid_idx])
-    dominant_freq = fft_freqs[valid_idx[peak_sub_idx]]
+    valid_freqs = fft_freqs[valid_idx]
+    valid_power = fft_power[valid_idx]
+
+    peak_sub_idx = np.argmax(valid_power)
+    dominant_freq = valid_freqs[peak_sub_idx]
+    peak_power = valid_power[peak_sub_idx]
+
+    # Harmonic suppression: check if dominant peak is a 2nd harmonic of a true fundamental HR
+    half_freq = dominant_freq / 2.0
+    if half_freq >= (48.0 / 60.0):
+        # Look for sub-harmonic peak in range [half_freq - 0.15Hz, half_freq + 0.15Hz]
+        sub_mask = np.abs(valid_freqs - half_freq) <= 0.15
+        if np.any(sub_mask):
+            sub_max_power = np.max(valid_power[sub_mask])
+            # If fundamental has at least 20% power of harmonic peak, choose fundamental
+            if sub_max_power >= 0.20 * peak_power:
+                sub_peak_idx = np.argmax(valid_power[sub_mask])
+                dominant_freq = valid_freqs[sub_mask][sub_peak_idx]
+
     bpm = dominant_freq * 60.0
     return float(bpm)
+
 
 
 def find_pulse_peaks(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
@@ -104,7 +123,7 @@ def find_pulse_peaks(filtered_signal, fps, min_bpm=55.0, max_bpm=130.0):
     peaks, _ = sp_signal.find_peaks(
         sig,
         distance=min_dist_samples,
-        prominence=np.std(sig) * 0.3 if np.std(sig) > 0 else None
+        prominence=np.std(sig) * 0.15 if np.std(sig) > 0 else None
     )
     return peaks
 
@@ -118,7 +137,7 @@ def compute_rmssd(peak_indices, fps):
         return None
 
     rrs_ms = np.diff(peak_indices) / fps * 1000.0
-    valid_rrs = rrs_ms[(rrs_ms >= 400.0) & (rrs_ms <= 1200.0)]
+    valid_rrs = rrs_ms[(rrs_ms >= 350.0) & (rrs_ms <= 1500.0)]
     if len(valid_rrs) < 2:
         return None
 

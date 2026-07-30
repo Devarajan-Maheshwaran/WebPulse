@@ -1,181 +1,45 @@
 # WebPulse
 
-**Webcam-based remote-PPG arousal estimation fused with voice valence, driving an LLM's emotionally-appropriate response — a contact-free proof-of-concept complement to wearable-sensor-based emotion-aware companion robot pipelines.**
+WebPulse is a research prototype for affect-aware interaction. It uses camera-based rPPG to estimate local HR/HRV, a WESAD-trained stress classifier, voice valence, and a Gemini Live spoken companion. Responses are conditioned on fused body and audio context, not presented as medical assessment or diagnosis.
 
-## What this is
+## System Architecture
 
-WebPulse is a research prototype that:
-1. Estimates a pulse-like signal from a normal laptop webcam (remote photoplethysmography / rPPG) — no wearable, no skin contact.
-2. Derives an HRV-based arousal score from that signal.
-3. Extracts voice-tone valence (pitch/energy) from microphone audio.
-4. Fuses arousal + valence into an emotion label (Russell's Circumplex Model: calm/aroused x positive/negative).
-5. Feeds the emotion label + live speech transcript into an LLM to generate an empathetic response.
-6. Logs every session (raw signals, HR/HRV, valence, emotion label, transcript, LLM output) to CSV/JSON for review and demonstration.
+- **Deep rPPG:** EfficientPhys from rPPG-Toolbox runs through ONNX Runtime with DirectML GPU preference and CPU fallback. MediaPipe capture supplies forehead and cheek regions.
+- **HR/HRV and stress:** The local BVP stream yields heart rate and time-domain PRV/HRV features, including RMSSD. A WESAD-derived RandomForest produces `CALM`, `NORMAL`, or `STRESSED` plus arousal; a small temporal stabilizer rejects isolated label jumps.
+- **Multimodal fusion:** The body branch supplies HR/HRV, WESAD state, signal quality, and an interpretable 0–5 bio-state rating. The audio branch supplies voice valence and live speech. Together they form a Russell-style arousal–valence state.
+- **LLM companion:** Gemini Live receives labeled background context, streams native audio, and supports barge-in interruption. Raw BPM and RMSSD remain local.
 
-It does **not** reimplement rPPG signal extraction from scratch — it builds directly on established, open-source rPPG techniques and applies them to a new pipeline (voice fusion + LLM response generation) and a new framing (low-compliance alternative to wearable sensors, especially relevant for elderly users).
+Run the local processes in order:
 
-## Why
-
-Physiological-signal-based emotion recognition (PPG/EEG wearables driving robot/LLM responses) is a well-established and effective approach, but a known real-world limitation is that many users — especially elderly users — resist wearing biosensors daily due to comfort, cost, or stigma (Noninvasive Patient Monitoring with Ambient Sensors, ASME 2024). Recent work (CAST-Phys, arXiv 2025) shows facial-video-derived physiological signals can substitute for contact sensors in affect recognition. WebPulse is a small, honest exploration of whether this contactless approach can drive the same kind of emotion-aware response pipeline, tested live on real people.
-
-## What's novel here (and what isn't)
-
-**Not novel:** the rPPG signal extraction technique itself (face ROI -> color-channel signal -> bandpass filter -> FFT/peak detection). This is a mature, well-documented method with multiple open-source implementations.
-
-**Novel / the actual contribution:**
-- Fusing webcam-derived HRV-based arousal/stress classification (explicitly inspired by Sugaya's lab's EEG+HRV emotion estimation work) with voice-derived valence in one live pipeline. [shibaura.elsevierpure](https://shibaura.elsevierpure.com/en/publications/feature-comparison-of-emotion-estimation-by-eeg-and-heart-rate-va)
-- Driving LLM-based empathetic response generation from that fused, contactless emotion estimate.
-- Framing and testing it explicitly as a low-compliance complement to wearable-based elderly-care emotion sensing.
-- Real pilot sessions with logged data, not just a signal-processing demo.
-
-## How it works (architecture)
-
-```
-Webcam --> Face/ROI detection --> Green/POS channel signal --> Bandpass filter (0.7-3.0 Hz)
-                                                                        |
-                                                                        v
-                                                     Heart rate + HRV --> Arousal score
-                                                                        |
-Microphone --> ASR transcript                                          |
-            --> Pitch/energy features --> Valence score                |
-                                                                        v
-                                          Fusion (Arousal, Valence) --> Emotion label
-                                                                        |
-                                                                        v
-                                 Prompt (label + transcript) --> LLM API --> Response
-                                                                        |
-                                                                        v
-                                                    Text / TTS output + session log
+```powershell
+python state_broker.py
+python -m rppg.rppg_server
+python app.py
 ```
 
----
+## Research-Backed Design
 
-## Installation & Setup Guide
+### Deep rPPG and remote HR/HRV
 
-### 1. Environment Prerequisites
-- Python 3.11 (Conda environment recommended)
-- OpenCV, MediaPipe, SciPy, NumPy, Librosa, SoundDevice, OpenAI-Whisper, PyTTSSx3
+- [Liu et al., *rPPG-Toolbox: Deep Remote PPG Toolbox*, NeurIPS 2023](https://proceedings.neurips.cc/paper_files/paper/2023/hash/d7d0d548a6317407e02230f15ce75817-Abstract-Datasets_and_Benchmarks.html) informs the EfficientPhys integration and general deep-rPPG evaluation approach.
+- [Liu et al., *EfficientPhys*, WACV 2023](https://openaccess.thecvf.com/content/WACV2023/html/Liu_EfficientPhys_Enabling_Simple_Fast_and_Accurate_Camera-Based_Cardiac_Measurement_WACV_2023_paper.html) motivates the lightweight camera physiological-inference path.
 
-### 2. Create Environment & Install Dependencies
-```bash
-# Create Conda environment
-conda create -n webpulse python=3.11 -y
-conda activate webpulse
+### HRV-based stress and interactive emotion mapping
 
-# Install required dependencies
-pip install -r requirements.txt
-```
+- [Schmidt et al., *Introducing WESAD*, ICMI 2018](https://ubi29.informatik.uni-siegen.de/usi/data_wesad.html) provides the stress/affect framing used by the local HRV classifier.
+- [Ikeda, Horie, and Sugaya, *Estimating Emotion with Biological Information for Robot Interaction*, 2017](https://doi.org/10.1016/j.procs.2017.08.198) conceptually supports mapping physiological indices to interaction-facing affect.
+- [Russell, *A Circumplex Model of Affect*, 1980](https://doi.org/10.1037/h0077714) informs the arousal–valence fusion of body arousal and voice valence.
 
-### 3. API Key Configuration
-Copy `.env.example` to `.env` and fill in your API key:
-```bash
-cp .env.example .env
-```
-Edit `.env`:
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your-actual-api-key-here
-LLM_MODEL=gpt-4o-mini
-```
-*Note: If no API key is provided, WebPulse automatically falls back to an offline mock response generator for local testing.*
+### Multimodal and temporal design
 
----
+- [Ziaratnia, Laohakangvalvit, Sugaya, and Sripian, *Multimodal Deep Learning for Remote Stress Estimation Using CCT-LSTM*, WACV 2024](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html) motivates explicit modality branches and lightweight temporal stabilization. WebPulse does not reproduce CCT-LSTM or train on UBFC-Phys.
 
-## How to Run
+## Implementation Notes
 
-### 1. Run Live Integrated Multimodal App
-```bash
-conda run -n webpulse python app.py --subject volunteer_01
-```
-*Press `q` in the camera display window to quit and export session logs.*
+- **Backend:** EfficientPhys ONNX, multi-ROI capture, local rPPG/PRV processing, and three-process local IPC.
+- **Stress classifier:** The WESAD-derived RandomForest uses RMSSD, estimated SDNN, and mean HR; its live output is temporally stabilized before fusion.
+- **Bio-data rating:** `bio_state_score_5` is a monotonic stress/activation summary: `0` is unavailable/unreliable physiology, `1` is very calm, `3` is moderate, and `5` is high activation/stress. Gemini receives this labeled scale and voice valence, never raw HR/RMSSD.
 
-### 2. Run Self-Test / Simulated Mode (No Hardware Required)
-```bash
-conda run -n webpulse python app.py --simulated
-```
+## Limitations and Future Work
 
-### 3. Run Standalone Module Test Scripts
-- **rPPG Pipeline Test**: `conda run -n webpulse python test_rppg.py`
-- **Voice Valence Test**: `conda run -n webpulse python test_audio.py`
-- **Emotion Fusion Unit Tests**: `conda run -n webpulse python test_fusion.py`
-- **LLM & Transcription Test**: `conda run -n webpulse python test_llm.py`
-- **Session Logger Test**: `conda run -n webpulse python test_logging.py`
-
----
-
-## Session Logs
-
-All pilot sessions export timestamped log files into the `sessions/` directory:
-- **`sessions/session_<timestamp>_<subject_id>.json`**: Complete structured record containing metadata, continuous HR/HRV metrics, arousal, valence, emotion quadrant, speech transcript, and LLM text response.
-- **`sessions/session_<timestamp>_<subject_id>.csv`**: Tabular CSV export suitable for data analysis and visualization.
-
----
-
-## Repo Structure
-
-```
-WebPulse/
-  rppg/             # Face mesh landmark detection, green ROI signal, bandpass filtering, HR & RMSSD HRV
-  audio/            # Microphone stream, librosa pitch/energy feature extraction, valence heuristic
-  fusion/           # Russell's Circumplex Model (arousal, valence) -> 4-quadrant emotion label
-  llm/              # Whisper speech-to-text, prompt builder, OpenAI/Anthropic client, pyttsx3 TTS engine
-  logging_/         # Session lifecycle logger (JSON and CSV file export)
-  sessions/         # Output directory for exported session log files
-  app.py            # Main entry point for live & simulated multimodal application
-  test_rppg.py      # Standalone rPPG test script
-  test_audio.py     # Standalone audio valence test script
-  test_fusion.py    # Unit tests for emotion fusion
-  test_llm.py       # Standalone LLM prompt & TTS test script
-  test_logging.py   # Standalone session logger test script
-  SRS_WebPulse.md   # Full Software Requirements Specification
-  README_WebPulse.md
-  README.md
-```
-
-## Built on top of (references and building blocks)
-
-**Research grounding (2025-2026):**
-- CAST-Phys: Contactless Affective States Through Physiological Signals Database, arXiv, 2025
-- Dimensional emotion recognition from camera-based PRV, 2023
-- A Novel HMD-Mounted Contactless Proxi-rPPG Sensor for Emotion Recognition, ETRI
-- Noninvasive Patient Monitoring with Ambient Sensors for Alzheimer's Disease, ASME, 2024
-- Exploring Contactless Techniques in Multimodal Emotion Recognition (survey), 2024
-- Contactless/sensor-based emotion recognition in older users (review), EAI Endorsed Transactions, 2025
-- Exploring the Feasibility of Wearable Sensors for Emotion Recognition in Older Adults, PMC, Dec 2025
-- Emotion Detection in Older Adults Using Physiological Signals from Wearables, arXiv, July 2025
-
-**Open-source implementations used/adapted:**
-- pyVHR (phuselab) — Python rPPG framework (GREEN/CHROM/POS methods)
-- rPPG-Toolbox (ubicomplab) — Deep-learning-based rPPG toolbox, NeurIPS 2023
-- webcam-pulse-detector (thearn) — minimal real-time webcam pulse detector
-- yarppg (Sam Proell) — MediaPipe Face Mesh + green-channel pulse extraction
-- ppg (quinnzipse) — simple webcam PPG heartbeat detector
-- vitallens-python (Rouast Labs) — actively maintained rPPG library (2026)
-- "Contactless Stress Sensing with Just a Camera" (Medium, Nov 2025) — step-by-step implementation blueprint used as primary reference
-
-**Other components:**
-- librosa — pitch/energy extraction for valence
-- Whisper (OpenAI) — speech-to-text transcription
-- LLM API (Claude/GPT) — empathetic response generation
-- pyttsx3 — TTS engine for spoken output
-
-See `SRS_WebPulse.md` for the full requirements specification, detailed references, and phased build plan.
-
-## Status
-
-Proof-of-concept / research prototype. Not a medical device. Tested on a small number of volunteer sessions with informed consent; not validated for clinical or diagnostic use.
-
-## Limitations
-
-- Sensitive to lighting, motion, and skin tone (a known limitation across all rPPG literature).
-- Arousal/valence-to-emotion mapping is currently heuristic, not learned from a large dataset.
-- No wearable ground-truth comparison yet; adding one is a natural next step.
-- Small pilot size; not a controlled study.
-
-## Future work
-
-- Add a wearable (e.g., smartwatch HR/HRV) as a parallel ground-truth channel for validation.
-- Expand pilot testing, especially with older adult volunteers, to directly address the elderly-specific validation gap noted in recent reviews.
-- Explore swapping the rPPG backend for a more advanced method (pyVHR/rPPG-Toolbox) for higher accuracy.
-- Refine the arousal/valence fusion rules using pilot data.
-- Experiment with CNN/transformer/SSM-based rPPG backends (e.g., PhysNet via rPPG-Toolbox) as a more advanced replacement for the classical rPPG stage, once the basic pipeline is stable, to show awareness of state-of-the-art methods without overcomplicating the initial proof-of-concept. [github](https://github.com/ubicomplab/rPPG-Toolbox)
+WebPulse is inspired by CCT-LSTM multimodal stress estimation, not a direct implementation or UBFC-Phys reproduction. Future work may validate a small per-modality temporal model or additional contactless datasets when this can be done without compromising real-time behavior.

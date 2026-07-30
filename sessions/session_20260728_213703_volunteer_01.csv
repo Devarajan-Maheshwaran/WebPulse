@@ -1,0 +1,9 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-28T21:37:11.127681,8.07,,,0.461,1.0,calm-positive,ㄹㄹㄹㄹㄹㄹㄹㄹㄹ,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:37:26.817244,23.76,108.0,218.79,0.05,1.0,calm-positive,They're certainly basically everyone in Arizona.,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:37:38.181268,35.12,128.0,209.44,0.05,0.0,calm-positive,Throughessed walk.,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:37:53.034151,49.97,88.69,239.53,0.05,0.171,calm-positive,¿No? terus. shipping Shop mas royalty게 loan loan voy a hydration Money YO PIR Statical 3 Mar close ESTIR minority la灣 la tribal車 Condun車 convire La está,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:37:59.993403,56.93,68.04,232.03,0.273,0.249,calm-positive,I'm not on demand to get charged. I'm not on demand to get charged.,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:38:10.132076,67.07,,,0.316,-0.008,calm-negative,者 year year year,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:38:25.687811,82.63,124.0,218.23,0.05,0.104,calm-positive,That's,[Gemini Rate Limit Reached — Waiting for quota reset...]
+2026-07-28T21:38:45.558430,102.5,100.0,234.92,0.05,1.0,calm-positive,I didn't yearly call it a weekend for Youtube. Yeah..,[LLM ERROR] Gemini API call failed: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)

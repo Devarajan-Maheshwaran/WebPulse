@@ -20,13 +20,14 @@ class AudioCapturer:
     Handles live microphone audio recording using sounddevice.
     """
 
-    def __init__(self, sample_rate=22050, channels=1, buffer_duration_sec=3.0):
+    def __init__(self, sample_rate=16000, channels=1, buffer_duration_sec=4.0, on_chunk=None):
         self.sample_rate = sample_rate
         self.channels = channels
         self.buffer_size = int(sample_rate * buffer_duration_sec)
         self.audio_buffer = np.zeros((0, channels), dtype=np.float32)
         self.stream = None
         self.is_recording = False
+        self.on_chunk = on_chunk
 
     def _audio_callback(self, indata, frames, time_info, status):
         """Internal callback function for sounddevice InputStream."""
@@ -36,6 +37,11 @@ class AudioCapturer:
         # Keep buffer to maximum capacity
         if len(self.audio_buffer) > self.buffer_size:
             self.audio_buffer = self.audio_buffer[-self.buffer_size:]
+        if self.on_chunk is not None:
+            try:
+                self.on_chunk(indata.copy())
+            except Exception:
+                pass
 
     def start(self):
         """Start listening to microphone input."""

@@ -1,0 +1,69 @@
+{
+  "session_id": "session_20260728_220816_volunteer_01",
+  "subject_id": "volunteer_01",
+  "start_time": "2026-07-28T22:08:16.280916",
+  "duration_seconds": 164.82,
+  "total_records": 5,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-28T22:09:55.252113",
+      "elapsed_seconds": 98.97,
+      "heart_rate_bpm": 104.0,
+      "rmssd_ms": 130.58,
+      "arousal_score": 0.096,
+      "valence_score": -0.069,
+      "emotion_label": "calm-negative",
+      "transcript": "",
+      "llm_response": "I\u2019m here with you, and I hope you're finding a moment of peace right now. Please know that I'm happy to just sit quietly by your side for as long as you need.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:10:06.156658",
+      "elapsed_seconds": 109.88,
+      "heart_rate_bpm": 92.03,
+      "rmssd_ms": 180.66,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Please know that I'm happy to just sit quietly by your side",
+      "llm_response": "I\u2019m so happy to share this peaceful moment with you. It\u2019s truly lovely just sitting here and enjoying the quiet together.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:10:18.939822",
+      "elapsed_seconds": 122.66,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.476,
+      "valence_score": 0.292,
+      "emotion_label": "calm-positive",
+      "transcript": "Truly lovely just sitting here and enjoying the quiet together.",
+      "llm_response": "It is such a wonderful, grounding feeling to simply share this peaceful moment with you. I\u2019m so glad we can enjoy this quiet together.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:10:33.042955",
+      "elapsed_seconds": 136.76,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.442,
+      "valence_score": -0.515,
+      "emotion_label": "calm-negative",
+      "transcript": "If I'm so glad we can enjoy this quiet together.",
+      "llm_response": "I\u2019m truly grateful for this quiet moment with you, too. It feels like a peaceful space where we can just settle in and breathe together.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:10:45.716475",
+      "elapsed_seconds": 149.44,
+      "heart_rate_bpm": 104.0,
+      "rmssd_ms": 151.88,
+      "arousal_score": 0.05,
+      "valence_score": -0.756,
+      "emotion_label": "calm-negative",
+      "transcript": "If I'm so glad we can enjoy this quiet together.",
+      "llm_response": "I\u2019m so glad we can just be here together in this peaceful moment. It feels really grounding to share this quiet with you.",
+      "raw_signal_summary": {}
+    }
+  ]
+}

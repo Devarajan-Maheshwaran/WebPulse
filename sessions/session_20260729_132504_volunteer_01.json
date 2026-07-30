@@ -1,0 +1,21 @@
+{
+  "session_id": "session_20260729_132504_volunteer_01",
+  "subject_id": "volunteer_01",
+  "start_time": "2026-07-29T13:25:04.329746",
+  "duration_seconds": 136.51,
+  "total_records": 1,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-29T13:26:23.612101",
+      "elapsed_seconds": 79.28,
+      "heart_rate_bpm": 87.01,
+      "rmssd_ms": 139.69,
+      "arousal_score": 0.627,
+      "valence_score": 0.28,
+      "emotion_label": "calm-positive",
+      "transcript": "that area\u91ceendes is if the reason I don't know t",
+      "llm_response": "It sounds like you're feeling quite relaxed right now, though I'm having a little trouble catching the end of your thought. I\u2019m here whenever you\u2019d like to pick that back up or just share what\u2019s on your mind.",
+      "raw_signal_summary": {}
+    }
+  ]
+}

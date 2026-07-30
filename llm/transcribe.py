@@ -69,6 +69,11 @@ class SpeechTranscriber:
         if audio_data is None or len(audio_data) < int(sr * 0.5):
             return ""
 
+        # Energy check to skip transcription on silence/ambient room noise
+        rms = float(np.sqrt(np.mean(np.square(audio_data))))
+        if rms < 0.012:
+            return ""
+
         if not self.load_model():
             return ""
 
@@ -78,8 +83,16 @@ class SpeechTranscriber:
                 tmp_path = tmp_file.name
             
             sf.write(tmp_path, audio_data, sr)
-            result = self.model.transcribe(tmp_path, fp16=False)
-            return result.get("text", "").strip()
+            # Enforce English language to prevent Whisper hallucinating random foreign unicode tokens on noise
+            result = self.model.transcribe(tmp_path, language="en", fp16=False)
+            text = result.get("text", "").strip()
+
+            # Filter out non-ASCII / foreign repetitive unicode hallucinations (e.g. Chinese/Korean junk tokens on silence)
+            non_ascii_count = sum(1 for char in text if ord(char) > 127)
+            if len(text) > 0 and (non_ascii_count / len(text)) > 0.3:
+                return ""
+
+            return text
         except Exception as e:
             print(f"[ERROR] Whisper transcription error: {e}")
             return ""
@@ -89,3 +102,4 @@ class SpeechTranscriber:
                     os.remove(tmp_path)
                 except Exception:
                     pass
+

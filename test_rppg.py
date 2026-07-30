@@ -16,7 +16,8 @@ import numpy as np
 import cv2
 
 from rppg.capture import FaceROICapturer
-from rppg.signal import extract_roi_green_channel, detrend_signal, butterworth_bandpass_filter
+from rppg.signal_proc import extract_roi_green_channel, detrend_signal, butterworth_bandpass_filter
+
 from rppg.hrv import estimate_heart_rate_fft, find_pulse_peaks, compute_rmssd, map_hrv_to_arousal
 
 

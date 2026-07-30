@@ -1,8 +1,9 @@
 """
-llm/tts.py — Text-to-Speech synthesis output module.
+llm/tts.py — Deprecated local Text-to-Speech compatibility module.
 
 Implements FR-8: Response Output (TTS).
-Uses pyttsx3 for offline speech synthesis.
+The active runtime uses Gemini Live native audio in live_emotion_agent.py;
+this module remains for non-live/offline compatibility only.
 """
 
 try:
@@ -37,6 +38,12 @@ class TTSEngine:
 
         if HAS_PYTTSX3:
             try:
+                try:
+                    import pythoncom
+                    pythoncom.CoInitialize()
+                except Exception:
+                    pass
+
                 engine = pyttsx3.init()
                 engine.setProperty('rate', self.rate)
                 engine.setProperty('volume', self.volume)
@@ -44,8 +51,9 @@ class TTSEngine:
                 engine.runAndWait()
                 return True
             except Exception as e:
-                print(f"[ERROR] TTS speech execution error: {e}")
+                print(f"[TTS WARNING] Speech synthesis issue: {e}")
                 return False
+
         else:
             print(f"[TTS DISABLED / DISPLAY ONLY] Output text: '{text}'")
             return False

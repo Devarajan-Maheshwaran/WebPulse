@@ -1,0 +1,6 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-07-28T22:09:55.252113,98.97,104.0,130.58,0.096,-0.069,calm-negative,,"I’m here with you, and I hope you're finding a moment of peace right now. Please know that I'm happy to just sit quietly by your side for as long as you need."
+2026-07-28T22:10:06.156658,109.88,92.03,180.66,0.05,1.0,calm-positive,Please know that I'm happy to just sit quietly by your side,I’m so happy to share this peaceful moment with you. It’s truly lovely just sitting here and enjoying the quiet together.
+2026-07-28T22:10:18.939822,122.66,,,0.476,0.292,calm-positive,Truly lovely just sitting here and enjoying the quiet together.,"It is such a wonderful, grounding feeling to simply share this peaceful moment with you. I’m so glad we can enjoy this quiet together."
+2026-07-28T22:10:33.042955,136.76,,,0.442,-0.515,calm-negative,If I'm so glad we can enjoy this quiet together.,"I’m truly grateful for this quiet moment with you, too. It feels like a peaceful space where we can just settle in and breathe together."
+2026-07-28T22:10:45.716475,149.44,104.0,151.88,0.05,-0.756,calm-negative,If I'm so glad we can enjoy this quiet together.,I’m so glad we can just be here together in this peaceful moment. It feels really grounding to share this quiet with you.

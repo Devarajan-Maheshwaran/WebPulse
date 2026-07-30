@@ -1,0 +1,141 @@
+{
+  "session_id": "session_20260728_223127_volunteer_01",
+  "subject_id": "volunteer_01",
+  "start_time": "2026-07-28T22:31:27.410798",
+  "duration_seconds": 664.9,
+  "total_records": 11,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-28T22:32:41.991164",
+      "elapsed_seconds": 74.58,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.461,
+      "valence_score": 0.337,
+      "emotion_label": "calm-positive",
+      "transcript": "Hello",
+      "llm_response": "Hello! It is so wonderful to hear from you today. I hope you're having a lovely, peaceful time.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:33:00.240862",
+      "elapsed_seconds": 92.83,
+      "heart_rate_bpm": 77.42,
+      "rmssd_ms": 138.72,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "long lines and",
+      "llm_response": "It sounds like you\u2019re dealing with some long lines today, but I love that you\u2019re staying so peaceful through it all. Take a deep breath and remember that things will move along soon enough.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:33:35.483834",
+      "elapsed_seconds": 128.07,
+      "heart_rate_bpm": 76.0,
+      "rmssd_ms": 170.47,
+      "arousal_score": 0.053,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Let's see if it's a low key, low key, low key, low key, low key.",
+      "llm_response": "It sounds like you\u2019re settling into such a peaceful, easygoing rhythm today. I\u2019m right here with you, just enjoying this calm and steady vibe.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:33:50.874724",
+      "elapsed_seconds": 143.46,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.214,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Do you want 20C card hey why don't you go weeera",
+      "llm_response": "It sounds like you're in such a lighthearted and playful mood today. I'm just here enjoying the peaceful vibe with you, so tell me what's on your mind!",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:36:08.572137",
+      "elapsed_seconds": 281.16,
+      "heart_rate_bpm": 60.02,
+      "rmssd_ms": 156.5,
+      "arousal_score": 0.05,
+      "valence_score": 0.408,
+      "emotion_label": "calm-positive",
+      "transcript": "then you can hold the shoulders and your arm as much as you want.",
+      "llm_response": "That sounds like such a lovely and peaceful way to share a moment of comfort. I\u2019m happy to hear you\u2019re feeling so relaxed and centered today.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:37:30.367814",
+      "elapsed_seconds": 362.96,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "What bro?",
+      "llm_response": "Hey, I'm just here hanging out and keeping you company. How is your day going so far?",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:37:48.435726",
+      "elapsed_seconds": 381.02,
+      "heart_rate_bpm": 60.09,
+      "rmssd_ms": 211.26,
+      "arousal_score": 0.05,
+      "valence_score": -0.013,
+      "emotion_label": "calm-negative",
+      "transcript": "in English.",
+      "llm_response": "I\u2019m sorry if things haven't been clear, and I\u2019m here to listen if you\u2019re feeling a bit low today. Please let me know what\u2019s on your mind so I can support you in the best way I can.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:38:02.712384",
+      "elapsed_seconds": 395.3,
+      "heart_rate_bpm": 94.95,
+      "rmssd_ms": 212.46,
+      "arousal_score": 0.052,
+      "valence_score": -0.357,
+      "emotion_label": "calm-negative",
+      "transcript": "ah oh z 0161 what's an ideally in the identify",
+      "llm_response": "It sounds like you're having a bit of a heavy or confusing day. I'm here for you, so please take all the time you need to settle your thoughts.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:38:29.496237",
+      "elapsed_seconds": 422.09,
+      "heart_rate_bpm": 56.0,
+      "rmssd_ms": 230.83,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Guys and sorry of the affected Taiwanese It hurts honestly Then it hurts Female",
+      "llm_response": "It is truly heartbreaking to hear about the pain affecting those in Taiwan, and I can feel how deeply you care. Please be gentle with yourself as you hold space for these heavy feelings today.",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:38:50.052662",
+      "elapsed_seconds": 442.64,
+      "heart_rate_bpm": 64.0,
+      "rmssd_ms": 183.26,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "MUSIC he's looking calling",
+      "llm_response": "It sounds like you're in a lovely, peaceful mood, perhaps enjoying some good music while you settle in. Is there a favorite song of yours playing that has you feeling so relaxed right now?",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T22:39:02.976194",
+      "elapsed_seconds": 455.57,
+      "heart_rate_bpm": 52.0,
+      "rmssd_ms": 170.96,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "That was a soundie. It's a soundie. It's a soundie. It's a soundie.",
+      "llm_response": "It sounds like you're feeling really peaceful and content in this moment. There is something truly soothing about finding a rhythm that makes you feel that relaxed.",
+      "raw_signal_summary": {}
+    }
+  ]
+}

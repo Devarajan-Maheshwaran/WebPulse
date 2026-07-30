@@ -33,3 +33,5 @@ Thumbs.db
 
 # Whisper model cache
 *.pt
+
+/data

@@ -5,9 +5,13 @@
 # Recommended:   Use a virtual environment (venv) first.
 # =============================================================================
 
-# --- Core / Scientific Computing ---
+# --- Core / Scientific Computing & Machine Learning ---
 numpy>=1.24,<2.0
 scipy>=1.10
+scikit-learn>=1.3
+torch>=2.0
+torchvision>=0.15
+onnxruntime-directml>=1.16 # AMD GPU support via DirectML on Windows
 
 # --- Video / Computer Vision ---
 opencv-python>=4.8
@@ -17,16 +21,17 @@ mediapipe>=0.10
 librosa>=0.10
 sounddevice>=0.4           # Real-time microphone capture
 soundfile>=0.12            # Audio file I/O (needed by sounddevice/librosa)
+imageio-ffmpeg>=0.4
+websockets>=14.0           # Persistent Gemini Live API session
 
 # --- ASR (Speech-to-Text) ---
-# Using OpenAI Whisper (local model — runs on CPU, no API key needed).
-# For GPU acceleration, install torch with CUDA separately first.
 openai-whisper>=20231117
 
 # --- LLM Client Libraries ---
-openai>=1.0                # For OpenAI GPT API
-anthropic>=0.25            # For Anthropic Claude API
-google-generativeai>=0.4.0 # For Google Gemini API
+google-genai>=0.1.0        # Google Gemini Client
+google-generativeai>=0.4.0 # Gemini fallback
+openai>=1.0                # OpenAI GPT API
+anthropic>=0.25            # Anthropic Claude API
 
 # --- TTS (Text-to-Speech) ---
 pyttsx3>=2.90              # Local TTS engine (no API key needed)
@@ -34,5 +39,5 @@ pyttsx3>=2.90              # Local TTS engine (no API key needed)
 # --- Environment / Config ---
 python-dotenv>=1.0         # Load .env files
 
-# --- Plotting (for standalone test/debug scripts) ---
+# --- Plotting ---
 matplotlib>=3.7

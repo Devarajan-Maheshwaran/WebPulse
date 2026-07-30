@@ -1,0 +1,105 @@
+{
+  "session_id": "session_20260728_213703_volunteer_01",
+  "subject_id": "volunteer_01",
+  "start_time": "2026-07-28T21:37:03.060118",
+  "duration_seconds": 102.98,
+  "total_records": 8,
+  "records": [
+    {
+      "timestamp_iso": "2026-07-28T21:37:11.127681",
+      "elapsed_seconds": 8.07,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.461,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "\u3139\u3139\u3139\u3139\u3139\u3139\u3139\u3139\u3139",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:37:26.817244",
+      "elapsed_seconds": 23.76,
+      "heart_rate_bpm": 108.0,
+      "rmssd_ms": 218.79,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "They're certainly basically everyone in Arizona.",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:37:38.181268",
+      "elapsed_seconds": 35.12,
+      "heart_rate_bpm": 128.0,
+      "rmssd_ms": 209.44,
+      "arousal_score": 0.05,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Throughessed walk.",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:37:53.034151",
+      "elapsed_seconds": 49.97,
+      "heart_rate_bpm": 88.69,
+      "rmssd_ms": 239.53,
+      "arousal_score": 0.05,
+      "valence_score": 0.171,
+      "emotion_label": "calm-positive",
+      "transcript": "\u00bfNo? terus. shipping Shop mas royalty\uac8c loan loan voy a hydration Money YO PIR Statical 3 Mar close ESTIR minority la\u7063 la tribal\u8eca Condun\u8eca convire La est\u00e1",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:37:59.993403",
+      "elapsed_seconds": 56.93,
+      "heart_rate_bpm": 68.04,
+      "rmssd_ms": 232.03,
+      "arousal_score": 0.273,
+      "valence_score": 0.249,
+      "emotion_label": "calm-positive",
+      "transcript": "I'm not on demand to get charged. I'm not on demand to get charged.",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:38:10.132076",
+      "elapsed_seconds": 67.07,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.316,
+      "valence_score": -0.008,
+      "emotion_label": "calm-negative",
+      "transcript": "\u8005 year year year",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:38:25.687811",
+      "elapsed_seconds": 82.63,
+      "heart_rate_bpm": 124.0,
+      "rmssd_ms": 218.23,
+      "arousal_score": 0.05,
+      "valence_score": 0.104,
+      "emotion_label": "calm-positive",
+      "transcript": "That's",
+      "llm_response": "[Gemini Rate Limit Reached \u2014 Waiting for quota reset...]",
+      "raw_signal_summary": {}
+    },
+    {
+      "timestamp_iso": "2026-07-28T21:38:45.558430",
+      "elapsed_seconds": 102.5,
+      "heart_rate_bpm": 100.0,
+      "rmssd_ms": 234.92,
+      "arousal_score": 0.05,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "I didn't yearly call it a weekend for Youtube. Yeah..",
+      "llm_response": "[LLM ERROR] Gemini API call failed: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)",
+      "raw_signal_summary": {}
+    }
+  ]
+}
