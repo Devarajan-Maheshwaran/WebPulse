@@ -21,7 +21,15 @@ from rppg.hrv import (
 
 
 class DeepRPPGEngine:
-    """Run the rPPG-Toolbox EfficientPhys ONNX model on each usable ROI."""
+    """Run EfficientPhys on synchronized forehead and bilateral-cheek ROIs.
+
+    EfficientPhys is a single-ROI temporal model, so each facial region is
+    evaluated through its own 10-frame window. The three resulting BVP
+    predictions are fused only when all three windows are valid; HR, HRV, and
+    WESAD then operate on that one fused signal.
+    """
+
+    REQUIRED_ROIS = ("forehead", "left_cheek", "right_cheek")
 
     def __init__(self, onnx_path="weights/efficientphys.onnx", frame_depth=10,
                  img_size=72, buffer_seconds=15, fps=30):
@@ -71,6 +79,9 @@ class DeepRPPGEngine:
     def preprocess_roi(self, roi_bgr):
         if roi_bgr is None or roi_bgr.size == 0:
             return None
+        # Face capture supplies raw crops. Enhancement is applied exactly once
+        # here so temporal color changes are not amplified by double CLAHE/
+        # gamma processing before EfficientPhys.
         enhanced = self.roi_enhancer.enhance(roi_bgr)
         rgb = cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
         resized = cv2.resize(rgb, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
@@ -101,21 +112,37 @@ class DeepRPPGEngine:
                 if frame is not None:
                     queue.append(frame)
                     usable.append(name)
+                else:
+                    queue.clear()
+            else:
+                # Do not let an old ROI window survive an occlusion and get
+                # paired with fresh data from the other facial regions.
+                queue.clear()
 
-        if not usable:
-            return self._result("NO_VALID_ROI", quality_meta, confidence_low=True)
+        if set(usable) != set(self.REQUIRED_ROIS):
+            return self._result(
+                "INCOMPLETE_ROI", quality_meta, confidence_low=True,
+                roi_names=usable,
+            )
 
         now = time.time()
-        ready = [name for name in usable if len(self.frame_queues[name]) == self.frame_depth + 1]
-        if ready and now - self._last_inference_time >= self._min_inference_interval:
+        ready = [name for name in self.REQUIRED_ROIS
+                 if len(self.frame_queues[name]) == self.frame_depth + 1]
+        if len(ready) == len(self.REQUIRED_ROIS) and now - self._last_inference_time >= self._min_inference_interval:
             predictions = {}
             for name in ready:
                 result = self._infer(list(self.frame_queues[name]))
                 if result is not None and result.size:
                     predictions[name] = result
-            if predictions:
-                # Equal fusion keeps cheeks useful when the forehead is occluded.
-                fused = np.mean(list(predictions.values()), axis=0)
+            if len(predictions) == len(self.REQUIRED_ROIS):
+                # Median fusion suppresses a transient glasses/highlight or
+                # landmark artifact in one ROI while retaining all three.
+                common_length = min(len(result) for result in predictions.values())
+                aligned = np.asarray(
+                    [predictions[name][-common_length:] for name in self.REQUIRED_ROIS],
+                    dtype=np.float64,
+                )
+                fused = np.median(aligned, axis=0)
                 new_count = max(1, int(self.fps * self._min_inference_interval))
                 self.bvp_buffer.extend(fused[-new_count:].tolist())
                 self._last_inference_time = now
@@ -144,10 +171,11 @@ class DeepRPPGEngine:
             )
             arousal = self.arousal_smoother.update(temporal_arousal)
         return self._result(quality, quality_meta, confidence_low=quality != "GOOD", hr=hr,
-                            rmssd=rmssd, arousal=arousal, stress=stress, snr_db=snr_db)
+                            rmssd=rmssd, arousal=arousal, stress=stress, snr_db=snr_db,
+                            roi_names=list(self.REQUIRED_ROIS))
 
     def _result(self, quality, meta, confidence_low, hr=None, rmssd=None, arousal=None,
-                stress="NORMAL", snr_db=0.0):
+                stress="NORMAL", snr_db=0.0, roi_names=None):
         return {
             "heart_rate": hr if hr is not None else (self.hr_smoother.last_smoothed or 70.0),
             "rmssd": rmssd if rmssd is not None else 35.0,
@@ -162,4 +190,6 @@ class DeepRPPGEngine:
             "is_low_light": bool(meta.get("is_low_light", False)),
             "mean_brightness": meta.get("mean_brightness", 0.0),
             "confidence_low": confidence_low,
+            "roi_names": list(roi_names or []),
+            "roi_count": len(roi_names or []),
         }

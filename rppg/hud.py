@@ -50,6 +50,7 @@ def draw_overlay_hud(frame, hud_data, bvp_history=None):
     stress = hud_data.get("stress_label", "NORMAL")
     emotion = hud_data.get("emotion_label", "calm-positive")
     quality = hud_data.get("quality_status", "GOOD")
+    roi_count = hud_data.get("roi_count", 0)
     provider = hud_data.get("execution_provider", "Unknown")
     face = hud_data.get("face_detected", False)
     transcript = hud_data.get("transcript", "")
@@ -65,6 +66,7 @@ def draw_overlay_hud(frame, hud_data, bvp_history=None):
     y += 28
     _text(frame, "SIGNAL", 18, y, 0.34, muted, 1)
     _text(frame, quality.replace("_", " "), 18, y + 23, 0.52, quality_color, 2)
+    _text(frame, f"ROI coverage {roi_count}/3", 18, y + 43, 0.34, muted, 1)
     y += 68
 
     _text(frame, "HEART RATE", 18, y, 0.34, muted, 1)

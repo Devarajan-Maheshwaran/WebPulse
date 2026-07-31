@@ -30,6 +30,8 @@ from rppg.signal_proc import extract_roi_green_channel, detrend_signal, butterwo
 from rppg.hrv import estimate_heart_rate_fft, find_pulse_peaks, compute_rmssd, map_hrv_to_arousal, HRSmoother
 from rppg.hud import draw_overlay_hud
 from rppg.deep_engine import DeepRPPGEngine
+from fusion.wesad_classifier import WESADHRVClassifier
+from fusion.emotion import StressStateSmoother
 
 
 class StateBrokerPublisher:
@@ -202,7 +204,8 @@ def run_rppg_server():
         "transcript": "",
         "llm_response": "",
         "face_detected": False,
-        "execution_provider": "Unknown"
+        "execution_provider": "Unknown",
+        "roi_count": 0
     }
     hud_lock = threading.Lock()
 
@@ -218,6 +221,8 @@ def run_rppg_server():
                 hud_state["emotion_desc"] = payload["emotion_desc"]
             if "stress_label" in payload:
                 hud_state["stress_label"] = payload["stress_label"]
+            if "roi_count" in payload:
+                hud_state["roi_count"] = payload["roi_count"]
             if "llm_response" in payload:
                 hud_state["llm_response"] = payload["llm_response"]
 
@@ -258,7 +263,10 @@ def run_rppg_server():
     hr_smoother = HRSmoother(history_size=5, alpha=0.3)
 
 
-    raw_g_signal = []
+    fallback_roi_names = ("forehead", "left_cheek", "right_cheek")
+    raw_g_signals = {name: [] for name in fallback_roi_names}
+    fallback_wesad = WESADHRVClassifier()
+    fallback_stress_smoother = StressStateSmoother()
     fps_estimate = 30.0
     start_time = time.time()
     last_broadcast_time = 0
@@ -318,17 +326,25 @@ def run_rppg_server():
                     quality_status = deep_res.get("quality_status", "GOOD")
                     bvp_history.append(deep_res.get("predicted_bvp", 0.0))
                 else:
-                    # Classical Green-Channel Fallback (uses forehead if available)
-                    roi_crop = None
-                    if rois is not None and rois["forehead"]["status"] == "USABLE":
-                        roi_crop = rois["forehead"]["crop"]
-                    g_val = extract_roi_green_channel(roi_crop)
-                    if g_val is not None:
-                        raw_g_signal.append(g_val)
-                        bvp_history.append(g_val)
+                    # Classical fallback also requires all three regions so
+                    # it has the same ROI contract as EfficientPhys/WESAD.
+                    if rois is not None and all(
+                        rois[name]["status"] == "USABLE" for name in fallback_roi_names
+                    ):
+                        for name in fallback_roi_names:
+                            g_val = extract_roi_green_channel(rois[name]["crop"])
+                            if g_val is not None:
+                                raw_g_signals[name].append(g_val)
+                        if all(raw_g_signals[name] for name in fallback_roi_names):
+                            bvp_history.append(float(np.median([
+                                raw_g_signals[name][-1] for name in fallback_roi_names
+                            ])))
                     if quality_meta.get("is_low_light"):
                         quality_status = "POOR_LIGHTING"
 
+            for name in fallback_roi_names:
+                if len(raw_g_signals[name]) > 120:
+                    raw_g_signals[name].pop(0)
             if len(bvp_history) > 120:
                 bvp_history.pop(0)
 
@@ -336,9 +352,17 @@ def run_rppg_server():
             if elapsed > 0:
                 fps_estimate = frame_count / elapsed
 
-            if deep_engine is None and len(raw_g_signal) >= int(fps_estimate * 3):
-                detrended = detrend_signal(raw_g_signal)
-                filtered = butterworth_bandpass_filter(detrended, fps=fps_estimate)
+            if deep_engine is None and all(
+                len(raw_g_signals[name]) >= int(fps_estimate * 3) for name in fallback_roi_names
+            ):
+                filtered_rois = []
+                for name in fallback_roi_names:
+                    detrended = detrend_signal(raw_g_signals[name])
+                    filtered_rois.append(butterworth_bandpass_filter(detrended, fps=fps_estimate))
+                common_length = min(len(signal) for signal in filtered_rois)
+                filtered = np.median(
+                    np.asarray([signal[-common_length:] for signal in filtered_rois]), axis=0
+                )
                 
                 raw_hr_bpm = estimate_heart_rate_fft(filtered, fps=fps_estimate)
                 current_hr = hr_smoother.update(raw_hr_bpm)
@@ -346,6 +370,11 @@ def run_rppg_server():
                 peaks = find_pulse_peaks(filtered, fps=fps_estimate)
                 current_rmssd = compute_rmssd(peaks, fps=fps_estimate)
                 raw_arousal = map_hrv_to_arousal(current_rmssd)
+                prediction = fallback_wesad.predict(current_rmssd, heart_rate=current_hr)
+                stress_label, raw_arousal = fallback_stress_smoother.update(
+                    prediction.get("stress_state", "NORMAL"),
+                    prediction.get("arousal_score", raw_arousal),
+                )
 
             with hud_lock:
                 hud_state["heart_rate"] = current_hr
@@ -372,12 +401,15 @@ def run_rppg_server():
                     "quality_status": quality_status,
                     "execution_provider": hud_state.get("execution_provider", "Unknown"),
                     "snr_db": deep_res.get("snr_db") if deep_res else None,
+                    "roi_names": deep_res.get("roi_names", []) if deep_res else list(fallback_roi_names),
+                    "roi_count": deep_res.get("roi_count", 0) if deep_res else len(fallback_roi_names),
                 }
                 server.broadcast(payload)
                 broker_publisher.publish(payload)
 
                 hr_str = f"{current_hr:.1f} BPM" if current_hr else "Calibrating..."
-                print(f"[rPPG Server ({backend_used})] Sent -> HR: {hr_str} | Arousal: {raw_arousal:.2f} | Stress: {stress_label} | Quality: {quality_status}")
+                roi_count = payload["roi_count"]
+                print(f"[rPPG Server ({backend_used})] Sent -> HR: {hr_str} | Arousal: {raw_arousal:.2f} | Stress: {stress_label} | Quality: {quality_status} | ROIs: {roi_count}/3")
 
             # Draw FULL WEBPULSE MODERN HUD OVERLAY INTERFACE
             display_frame = draw_overlay_hud(display_frame, current_hud_snapshot, bvp_history=bvp_history)

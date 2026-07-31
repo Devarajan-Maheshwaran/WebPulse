@@ -201,10 +201,12 @@ class FaceROICapturer:
                         if rw > 5 and rh > 5:
                             raw_crop = frame[min_y:max_y, min_x:max_x]
                             is_occ, status, mean_b, std_b = self.check_roi_occlusion(raw_crop)
-                            enhanced_crop = self.roi_enhancer.enhance(raw_crop) if not is_occ else raw_crop
-
                             rois[roi_name] = {
-                                "crop": enhanced_crop if not is_occ else raw_crop,
+                                # Keep the capture contract raw. The deep
+                                # engine applies enhancement once, immediately
+                                # before model normalization, avoiding double
+                                # temporal contrast manipulation.
+                                "crop": raw_crop,
                                 "box": (min_x, min_y, rw, rh),
                                 "status": status,
                                 "mean_b": mean_b,
@@ -247,7 +249,7 @@ class FaceROICapturer:
                         rcrop = frame[py:py+ph, px:px+pw]
                         is_occ, status, mean_b, std_b = self.check_roi_occlusion(rcrop)
                         rois[rname] = {
-                            "crop": self.roi_enhancer.enhance(rcrop),
+                            "crop": rcrop,
                             "box": (px, py, pw, ph),
                             "status": status,
                             "mean_b": mean_b,
@@ -282,4 +284,3 @@ class FaceROICapturer:
         quality_meta = {"is_low_light": is_low_light, "mean_brightness": round(mean_b, 1)}
 
         return best_roi["crop"], full_face_box, best_roi["box"], method, quality_meta
-
