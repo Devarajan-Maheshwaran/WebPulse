@@ -1,4 +1,10 @@
-"""Process 2: Gemini Live audio and context controller for WebPulse."""
+"""Process 2: Gemini Live audio/context controller for WebPulse.
+
+The active runtime uses one persistent Gemini Live WebSocket. The microphone
+and speaker are owned by this process; camera/WESAD state arrives through the
+localhost state broker. Legacy Whisper, HTTP LLM, and pyttsx3 paths are not
+used here because they add a second turn-generation pipeline and latency.
+"""
 
 import asyncio
 import base64
@@ -15,18 +21,17 @@ from dotenv import load_dotenv
 
 from audio.valence import estimate_voice_valence, extract_audio_features
 from fusion.emotion import fuse_emotions
+from logging_.session_logger import SessionLogger
 
 
 load_dotenv()
 
 INPUT_RATE = 16_000
 OUTPUT_RATE = 24_000
-CHUNK_FRAMES = 640  # 40 ms at 16 kHz
-STATE_INTERVAL_SECONDS = 2.0
-MAX_AUDIO_QUEUE_CHUNKS = 8  # 320 ms maximum stale microphone audio
-# Keep both native transcript channels enabled so the HUD can distinguish the
-# user's words from the companion's response. Audio generation is unaffected.
-ENABLE_TRANSCRIPTIONS = os.getenv("GEMINI_LIVE_TRANSCRIPTIONS", "1") == "1"
+CHUNK_FRAMES = 640  # 40 ms of microphone audio
+MIC_QUEUE_CHUNKS = 8  # at most 320 ms of queued input
+STATE_INTERVAL_SECONDS = 1.0
+PHYSIOLOGY_MEMORY_SIZE = 10
 MODEL_NAME = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
 VOICE_NAME = os.getenv("GEMINI_LIVE_VOICE", "Puck")
 WS_ENDPOINT = (
@@ -35,43 +40,40 @@ WS_ENDPOINT = (
 )
 
 SYSTEM_INSTRUCTION = """
-You are WebPulse Live, a calm, supportive spoken companion for HCI research at
-Midori Sugaya Sensei's Lab, Shibaura Institute of Technology. Speak naturally,
-briefly, and empathetically. Treat camera-derived physiology and voice valence
-as uncertain contextual signals, never as medical facts or a diagnosis.
+You are WebPulse Live, an empathetic spoken companion for HCI research at
+Midori Sugaya Sensei's Lab, Shibaura Institute of Technology. Speak briefly,
+naturally, and directly about what the user says. Treat camera and voice
+telemetry as uncertain context, never as medical facts or a diagnosis.
 
-Physiology messages use labeled scores from 1 to 5. A higher stress or arousal
-score means more activation; a higher valence score means more positive affect;
-a higher HRV stress-load score means a less calm signal. Do not infer raw
-medical measurements from these scores.
+Background messages are labeled PHYSIOLOGY CONTEXT and contain only bounded
+0-5 scores and signal-quality labels. Do not answer background messages by
+themselves. When the user speaks, use the latest context silently. If the
+bio-state score is high or stress is STRESSED, use a slower rhythm, soothing
+word choice, and a lower perceived pitch. If signal quality is WEAK_SIGNAL,
+POOR_LIGHTING, or UNAVAILABLE, do not claim to know the user's physical or
+emotional state and invite correction. Never say that you know how the user
+feels from the sensors.
 
-Each context message also has `bio_state_score_5`: a single, explainable
-activation/stress summary derived from the WESAD stress level and physiological
-arousal. Score 0 means the visual signal is unreliable, 1 is very calm, 3 is
-moderate, and 5 is high activation/stress. Treat score 0 as unavailable rather
-than calm and use cautious language whenever signal quality is not GOOD.
-
-Physiology updates arrive continuously as background context. Do not reply to
-those updates on their own; respond when the user speaks. When the latest state
-shows high arousal, STRESSED status, or negative valence, use a soothing tone,
-slower rhythm, simpler phrasing, and a lower perceived pitch. If signal quality
-is WEAK_SIGNAL or POOR_LIGHTING, explicitly keep claims tentative. Prefer
-changes from the user's own recent baseline over absolute physiological values.
-Never tell a user that you know how they feel; invite correction and support
-agency.
+When answering a question about how the user feels, use the latest
+ANSWER-TIME PHYSIOLOGY context as the primary physiological evidence. Treat
+the score labels as the current state, not as a request to discuss telemetry.
 """.strip()
 
 
 class PCMPlayback:
-    """Low-latency 24 kHz speaker queue that is cleared on a barge-in."""
+    """Low-latency native-audio playback queue with immediate barge-in clear."""
 
     def __init__(self):
         self._chunks = collections.deque()
         self._offset = 0
         self._lock = threading.Lock()
         self._stream = sd.OutputStream(
-            samplerate=OUTPUT_RATE, channels=1, dtype="int16",
-            blocksize=CHUNK_FRAMES, latency="low", callback=self._callback,
+            samplerate=OUTPUT_RATE,
+            channels=1,
+            dtype="int16",
+            blocksize=CHUNK_FRAMES,
+            latency="low",
+            callback=self._callback,
         )
 
     def start(self):
@@ -104,23 +106,27 @@ class PCMPlayback:
                 outdata[written:written + count, 0] = chunk[self._offset:self._offset + count]
                 written += count
                 self._offset += count
-                if self._offset == len(chunk):
+                if self._offset >= len(chunk):
                     self._chunks.popleft()
                     self._offset = 0
 
 
 class MicrophoneStream:
-    """The only microphone owner in the three-process design."""
+    """Capture 16 kHz PCM and expose a short rolling analysis buffer."""
 
     def __init__(self, loop):
-        self.audio_queue = asyncio.Queue(maxsize=MAX_AUDIO_QUEUE_CHUNKS)
         self._loop = loop
+        self.audio_queue = asyncio.Queue(maxsize=MIC_QUEUE_CHUNKS)
         self.last_speech_at = 0.0
         self._samples = collections.deque(maxlen=INPUT_RATE * 4)
         self._samples_lock = threading.Lock()
         self._stream = sd.InputStream(
-            samplerate=INPUT_RATE, channels=1, dtype="int16",
-            blocksize=CHUNK_FRAMES, latency="low", callback=self._callback,
+            samplerate=INPUT_RATE,
+            channels=1,
+            dtype="int16",
+            blocksize=CHUNK_FRAMES,
+            latency="low",
+            callback=self._callback,
         )
 
     def start(self):
@@ -137,7 +143,8 @@ class MicrophoneStream:
     def _callback(self, indata, frames, time_info, status):
         del frames, time_info, status
         pcm = indata.copy().astype("<i2", copy=False)
-        if float(np.sqrt(np.mean(pcm.astype(np.float32) ** 2))) > 450.0:
+        rms = float(np.sqrt(np.mean(pcm.astype(np.float32) ** 2)))
+        if rms > 450.0:
             self.last_speech_at = time.monotonic()
         with self._samples_lock:
             self._samples.extend(pcm[:, 0].tolist())
@@ -153,18 +160,19 @@ class MicrophoneStream:
 
 
 class BrokerStateSubscriber:
-    """Receives latest-only physiology state from Process 3 without disk I/O."""
+    """Receive latest-only physiology state from Process 1 via Process 3."""
 
     def __init__(self, queue):
         self.queue = queue
 
     async def run(self):
         while True:
+            writer = None
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 5003)
                 writer.write(b'{"type":"subscribe"}\n')
                 await writer.drain()
-                print("[Live Agent] Connected to state broker.")
+                print("[Live Agent] Connected to state broker (127.0.0.1:5003).")
                 while True:
                     line = await reader.readline()
                     if not line:
@@ -173,19 +181,25 @@ class BrokerStateSubscriber:
                         state = json.loads(line.decode("utf-8"))
                     except json.JSONDecodeError:
                         continue
-                    await self.queue.put(state)
+                    if self.queue.full():
+                        try:
+                            self.queue.get_nowait()
+                        except asyncio.QueueEmpty:
+                            pass
+                    self.queue.put_nowait(state)
             except (ConnectionError, OSError):
-                await asyncio.sleep(1)
+                await asyncio.sleep(1.0)
             finally:
-                try:
+                if writer is not None:
                     writer.close()
-                    await writer.wait_closed()
-                except (UnboundLocalError, OSError):
-                    pass
+                    try:
+                        await writer.wait_closed()
+                    except OSError:
+                        pass
 
 
 class HUDClient:
-    """Keeps the existing camera HUD connection separate from physiology IPC."""
+    """Send transcripts and companion state to the camera HUD."""
 
     def __init__(self):
         self.writer = None
@@ -195,10 +209,11 @@ class HUDClient:
         while True:
             try:
                 reader, self.writer = await asyncio.open_connection("127.0.0.1", 5001)
+                print("[Live Agent] Connected to HUD server (127.0.0.1:5001).")
                 while await reader.readline():
-                    pass  # Discard metrics: Process 3 is the source of physiological state.
+                    pass
             except (ConnectionError, OSError):
-                await asyncio.sleep(1)
+                await asyncio.sleep(1.0)
             finally:
                 self.writer = None
 
@@ -206,8 +221,11 @@ class HUDClient:
         if self.writer is None:
             return
         async with self.lock:
-            self.writer.write((json.dumps(dict(payload, type="hud_update")) + "\n").encode("utf-8"))
-            await self.writer.drain()
+            try:
+                self.writer.write((json.dumps(dict(payload, type="hud_update")) + "\n").encode("utf-8"))
+                await self.writer.drain()
+            except (ConnectionError, OSError):
+                self.writer = None
 
 
 class GeminiLiveEmotionAgent:
@@ -215,28 +233,37 @@ class GeminiLiveEmotionAgent:
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not self.api_key:
             raise RuntimeError("GEMINI_API_KEY is missing from .env")
-        self.state_queue = asyncio.Queue()
+        self.state_queue = asyncio.Queue(maxsize=1)
         self.current_state = {
-            "heart_rate": None, "hrv": None, "arousal": 0.5,
-            "stress_state": "NORMAL", "quality_status": "WEAK_SIGNAL", "valence": 0.0,
+            "heart_rate": None,
+            "hrv": None,
+            "arousal": 0.5,
+            "stress_state": "NORMAL",
+            "quality_status": "WEAK_SIGNAL",
+            "valence": 0.0,
+            "roi_count": 0,
         }
-        self.playback = None
         self.microphone = None
-        self.hud = HUDClient()
+        self.playback = None
         self.broker = BrokerStateSubscriber(self.state_queue)
-        self._model_speaking = False
-        self._last_state_sent = 0.0
-        self._last_context_signature = None
-        self._last_response_latency_log = 0.0
+        self.hud = HUDClient()
+        self.session_logger = SessionLogger()
         self._send_lock = asyncio.Lock()
+        self._model_speaking = False
         self._speech_active = False
+        self._last_state_sent = 0.0
+        self._last_state_signature = None
+        self._physiology_memory = collections.deque(maxlen=PHYSIOLOGY_MEMORY_SIZE)
+        self._last_memory_append = 0.0
+        self._input_text = ""
+        self._output_text = ""
 
     @property
     def ws_url(self):
         return f"{WS_ENDPOINT}?key={self.api_key}"
 
     def setup_payload(self):
-        payload = {
+        return {
             "setup": {
                 "model": f"models/{MODEL_NAME}",
                 "generationConfig": {
@@ -244,23 +271,25 @@ class GeminiLiveEmotionAgent:
                     "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": VOICE_NAME}}},
                 },
                 "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "inputAudioTranscription": {},
+                "outputAudioTranscription": {},
                 "realtimeInputConfig": {"automaticActivityDetection": {
-                    "disabled": False, "prefixPaddingMs": 20, "silenceDurationMs": 300,
+                    "disabled": False,
+                    "prefixPaddingMs": 20,
+                    "silenceDurationMs": 300,
                 }},
             }
         }
-        if ENABLE_TRANSCRIPTIONS:
-            payload["setup"].update({
-                "inputAudioTranscription": {}, "outputAudioTranscription": {},
-            })
-        return payload
 
     async def run(self):
+        if sd is None:
+            raise RuntimeError("sounddevice is required for Gemini Live microphone/speaker I/O")
         loop = asyncio.get_running_loop()
-        self.playback = PCMPlayback()
         self.microphone = MicrophoneStream(loop)
-        self.playback.start()
+        self.playback = PCMPlayback()
+        self.session_logger.start_session(subject_id=os.getenv("WEBPULSE_SUBJECT", "subject_pilot"))
         self.microphone.start()
+        self.playback.start()
         broker_task = asyncio.create_task(self.broker.run())
         hud_task = asyncio.create_task(self.hud.run())
         try:
@@ -272,14 +301,17 @@ class GeminiLiveEmotionAgent:
                         print(f"[Live Agent] Gemini Live connected ({MODEL_NAME}, {VOICE_NAME}).")
                         await self._run_session(ws)
                 except Exception as exc:
-                    print(f"[Live Agent] Gemini session disconnected: {exc}. Retrying in 2s.")
-                    await asyncio.sleep(2)
+                    print(f"[Live Agent] WebSocket disconnected: {exc}. Retrying in 2s.")
+                    await asyncio.sleep(2.0)
         finally:
-            for task in (broker_task, hud_task):
-                task.cancel()
+            broker_task.cancel()
+            hud_task.cancel()
             await asyncio.gather(broker_task, hud_task, return_exceptions=True)
             self.microphone.stop()
             self.playback.stop()
+            summary = self.session_logger.stop_session()
+            if summary:
+                print(f"[Session Logger] Exported session -> {summary['json_path']} & {summary['csv_path']}")
 
     async def _wait_for_setup(self, ws):
         while True:
@@ -311,89 +343,113 @@ class GeminiLiveEmotionAgent:
     async def _send_microphone(self, ws):
         while True:
             pcm = await self.microphone.audio_queue.get()
-
-            # Push the latest physiology before Gemini's VAD can finish the
-            # user's turn. This makes every speech turn use current body data,
-            # instead of depending on the periodic background timer.
             now = time.monotonic()
             speaking = now - self.microphone.last_speech_at < 0.18
+
+            # Do not feed speaker playback back into Gemini. A real local
+            # speech event is still allowed through so Gemini can interrupt
+            # the current response (barge-in).
+            if self._model_speaking and not speaking:
+                continue
+
             if speaking and not self._speech_active:
                 self._speech_active = True
-                await self._send_latest_state(ws, force=True, reason="speech_start")
+                self._input_text = ""
+                await self.hud.update({"transcript": ""})
+                await self._send_latest_context(ws, force=True, reason="speech_start")
 
             await self._send(ws, {"realtimeInput": {"audio": {
                 "mimeType": "audio/pcm;rate=16000",
                 "data": base64.b64encode(pcm).decode("ascii"),
             }}})
 
-            # Send once more after speech drops below the local activity
-            # threshold. Gemini's server VAD still has its silence window, so
-            # this update arrives before turnComplete and response generation.
             if self._speech_active and not speaking and now - self.microphone.last_speech_at >= 0.18:
                 self._speech_active = False
-                await self._send_latest_state(ws, force=True, reason="speech_end")
+                await self._send_latest_context(ws, force=True, reason="speech_end")
 
     async def _send_background_state(self, ws):
         while True:
             self.current_state.update(await self.state_queue.get())
+            self._remember_current_state()
             now = time.monotonic()
-            if (
-                self._model_speaking
-                or now - self.microphone.last_speech_at < 1.0
-                or now - self._last_state_sent < STATE_INTERVAL_SECONDS
-            ):
+            if self._model_speaking or now - self.microphone.last_speech_at < 1.0:
                 continue
-            await self._send_latest_state(ws)
+            # Keep physiology in the local memory buffer while idle. Sending
+            # telemetry as realtimeInput text can itself be interpreted as a
+            # conversational turn and cause unsolicited model speech.
 
-    async def _send_latest_state(self, ws, force=False, reason="periodic"):
-        """Inject current physiology without completing the user's turn."""
+    async def _send_latest_context(self, ws, force=False, reason="periodic"):
         now = time.monotonic()
         if not force and now - self._last_state_sent < STATE_INTERVAL_SECONDS:
             return
-
-        fused = fuse_emotions(
-            self.current_state.get("arousal"), self.current_state.get("valence"),
-            hrv_rmssd=self.current_state.get("hrv"), heart_rate=self.current_state.get("heart_rate") or 70.0,
-            stress_label=self.current_state.get("stress_state"),
-            classifier_source="process_1_wesad_temporal",
-        )
-        physiological_context = self._build_scored_context(fused)
-        context = {
-            **physiological_context,
-            "signal_quality": self.current_state.get("quality_status"),
-        }
-        signature = (
-            context["stress"], context["signal_quality"],
-            context["stress_score_5"], context["arousal"]["score_5"],
-            context["valence"]["score_5"], context["heart_rate"]["score_5"],
-            context["hrv_stress_load"]["score_5"], context["bio_state_score_5"],
-        )
-        # Periodic updates can be deduplicated. Speech-turn updates cannot:
-        # the same physiology still needs to be attached to each new utterance.
-        if not force and signature == self._last_context_signature:
+        context = self._latest_memory_context()
+        signature = tuple(sorted(context.items()))
+        if not force and signature == self._last_state_signature:
             return
-
+        self._last_state_signature = signature
         self._last_state_sent = now
-        self._last_context_signature = signature
+        message_label = "ANSWER-TIME PHYSIOLOGY" if reason in {"speech_start", "speech_end"} else "PHYSIOLOGY CONTEXT"
+        text = f"{message_label} ({reason}; do not answer): {json.dumps(context, separators=(',', ':'))}"
+        # Metadata is deliberately sent as an incomplete client turn. It
+        # updates context without creating a fresh user turn or allowing the
+        # model to answer telemetry by itself. User audio remains the only
+        # trigger for a response.
         await self._send(ws, {"clientContent": {"turns": [{"role": "user", "parts": [{
-            "text": f"BACKGROUND PHYSIOLOGY UPDATE ({reason}; do not answer yet): " + json.dumps(context)
+            "text": text
         }]}], "turnComplete": False}})
+        fused = self._fused_from_context(context)
         await self.hud.update({
-            "valence": fused["valence"], "emotion_label": fused["label"],
-            "emotion_desc": fused["description"], "stress_label": fused["stress_label"],
+            "valence": fused["valence"],
+            "emotion_label": fused["label"],
+            "emotion_desc": fused["description"],
+            "stress_label": fused["stress_label"],
+            "roi_count": self.current_state.get("roi_count", 0),
         })
 
+    def _remember_current_state(self):
+        """Append one scored snapshot per second to a fixed-size memory."""
+        now = time.monotonic()
+        if now - self._last_memory_append < STATE_INTERVAL_SECONDS:
+            return
+        fused = fuse_emotions(
+            self.current_state.get("arousal"), self.current_state.get("valence"),
+            hrv_rmssd=self.current_state.get("hrv"),
+            heart_rate=self.current_state.get("heart_rate") or 70.0,
+            stress_label=self.current_state.get("stress_state"),
+            classifier_source="process_1_wesad",
+        )
+        context = self._build_scored_context(fused)
+        self._physiology_memory.append({
+            "timestamp": time.time(),
+            "scores": context,
+        })
+        self._last_memory_append = now
+
+    def _latest_memory_context(self):
+        if not self._physiology_memory:
+            self._remember_current_state()
+        if self._physiology_memory:
+            return dict(self._physiology_memory[-1]["scores"])
+        return self._build_scored_context(self._fused_from_current_state())
+
+    def _fused_from_current_state(self):
+        return fuse_emotions(
+            self.current_state.get("arousal"), self.current_state.get("valence"),
+            hrv_rmssd=self.current_state.get("hrv"),
+            heart_rate=self.current_state.get("heart_rate") or 70.0,
+            stress_label=self.current_state.get("stress_state"),
+            classifier_source="process_1_wesad",
+        )
+
+    def _fused_from_context(self, context):
+        """Provide HUD labels while keeping the model payload score-only."""
+        fused = self._fused_from_current_state()
+        if context.get("signal_quality") == "UNAVAILABLE":
+            fused["label"] = "UNAVAILABLE"
+        return fused
+
     def _build_scored_context(self, fused):
-        """Return only labeled, bounded 0-5 context for Gemini.
-
-        Raw BPM/RMSSD values remain local to the application and are not
-        included in the model-facing background message.
-
-        This lightweight ordinal rating is analogous to a physiological-state
-        annotation scale: it improves interpretability without adding a model
-        or changing the local rPPG/WESAD inference path.
-        """
-        def score_1_to_5(value, low, high, invert=False, default=3.0):
+        def score(value, low, high, invert=False, default=3.0):
             if value is None:
                 return default
             normalized = float(np.clip((float(value) - low) / (high - low), 0.0, 1.0))
@@ -404,67 +460,26 @@ class GeminiLiveEmotionAgent:
         arousal = float(np.clip(fused.get("arousal", 0.5), 0.0, 1.0))
         valence = float(np.clip(fused.get("valence", 0.0), -1.0, 1.0))
         stress = str(fused.get("stress_label", "NORMAL")).upper()
-        heart_rate = self.current_state.get("heart_rate")
-        rmssd = self.current_state.get("hrv")
-        signal_quality = str(self.current_state.get("quality_status", "WEAK_SIGNAL")).upper()
-
-        arousal_label = "LOW" if arousal < 0.30 else "MODERATE" if arousal < 0.70 else "HIGH"
-        valence_label = "NEGATIVE" if valence <= -0.40 else "NEUTRAL" if valence < 0.40 else "POSITIVE"
-
-        if heart_rate is None:
-            heart_rate_label = "UNAVAILABLE"
-        elif heart_rate < 60:
-            heart_rate_label = "LOW"
-        elif heart_rate > 100:
-            heart_rate_label = "ELEVATED"
-        else:
-            heart_rate_label = "TYPICAL"
-
-        if rmssd is None:
-            hrv_label = "UNAVAILABLE"
-        elif rmssd < 25:
-            hrv_label = "LOW_HRV"
-        elif rmssd > 50:
-            hrv_label = "HIGH_HRV"
-        else:
-            hrv_label = "TYPICAL_HRV"
-
+        quality = str(self.current_state.get("quality_status", "WEAK_SIGNAL")).upper()
         stress_score = {"CALM": 1.0, "NORMAL": 3.0, "STRESSED": 5.0}.get(stress, 3.0)
         arousal_score = round(1.0 + 4.0 * arousal, 1)
-        if signal_quality == "GOOD":
-            # Both inputs rise monotonically with activation/stress. WESAD is
-            # weighted more strongly because it is the trained stress output.
-            bio_state_score = round(0.7 * stress_score + 0.3 * arousal_score, 1)
-            bio_state_label = (
-                "VERY_CALM" if bio_state_score <= 1.5 else
-                "CALM" if bio_state_score <= 2.5 else
-                "MODERATE" if bio_state_score <= 3.5 else
-                "ELEVATED" if bio_state_score <= 4.5 else "HIGH_STRESS"
-            )
-        else:
-            # Zero is reserved for missing or unreliable camera physiology;
-            # it is never interpreted as a calm-state estimate.
-            bio_state_score = 0.0
-            bio_state_label = "UNAVAILABLE"
-
+        bio_score = round(0.7 * stress_score + 0.3 * arousal_score, 1) if quality == "GOOD" else 0.0
         return {
-            "stress": stress,
-            "stress_score_5": stress_score,
-            "bio_state_label": bio_state_label,
-            "bio_state_score_5": bio_state_score,
-            "arousal": {"label": arousal_label, "score_5": arousal_score},
-            "valence": {"label": valence_label, "score_5": round(1.0 + 2.0 * (valence + 1.0), 1)},
-            "heart_rate": {"label": heart_rate_label, "score_5": score_1_to_5(heart_rate, 50.0, 120.0)},
-            # In this field, 5 means higher stress load / lower HRV.
-            "hrv_stress_load": {
-                "label": hrv_label,
-                "score_5": score_1_to_5(rmssd, 10.0, 100.0, invert=True),
-            },
+            "bio_state_score_5": bio_score,
+            "bio_state_label": "UNAVAILABLE" if bio_score == 0.0 else "ACTIVE",
+            "wesad_stress_label": stress,
+            "wesad_stress_score_5": stress_score,
+            "arousal_score_5": arousal_score,
+            "valence_score_5": round(1.0 + 2.0 * (valence + 1.0), 1),
+            "hr_score_5": score(self.current_state.get("heart_rate"), 50.0, 120.0),
+            "hrv_stress_load_5": score(self.current_state.get("hrv"), 10.0, 100.0, invert=True),
+            "signal_quality": quality,
+            "roi_coverage": f"{self.current_state.get('roi_count', 0)}/3",
         }
 
     async def _update_valence(self):
         while True:
-            await asyncio.sleep(2)
+            await asyncio.sleep(2.0)
             samples = self.microphone.recent_float_audio()
             if len(samples) >= INPUT_RATE:
                 features = await asyncio.to_thread(extract_audio_features, samples, INPUT_RATE)
@@ -472,53 +487,71 @@ class GeminiLiveEmotionAgent:
 
     async def _receive_server(self, ws):
         async for raw in ws:
-            content = json.loads(raw).get("serverContent", {})
+            message = json.loads(raw)
+            content = message.get("serverContent", {})
             if content.get("interrupted"):
                 self._model_speaking = False
                 self.playback.clear()
                 await self.hud.update({"llm_response": ""})
                 continue
-            # These are deliberately handled as two independent channels.
-            # Never copy output transcription into `transcript` (VOICE), or
-            # input transcription into `llm_response` (COMPANION).
+
             input_text = self._read_transcript(content, "inputTranscription")
             if input_text:
-                await self.hud.update({"transcript": input_text})
+                self._input_text = self._merge_text(self._input_text, input_text)
+                await self.hud.update({"transcript": self._input_text})
 
             output_text = self._read_transcript(content, "outputTranscription")
             if output_text:
-                await self.hud.update({"llm_response": output_text})
+                self._output_text = self._merge_text(self._output_text, output_text)
+                await self.hud.update({"llm_response": self._output_text})
+
             for part in content.get("modelTurn", {}).get("parts", []):
                 inline = part.get("inlineData") or {}
                 if inline.get("data"):
-                    speech_at = self.microphone.last_speech_at
-                    if speech_at > self._last_response_latency_log:
-                        print(f"[Live Agent] First audio latency: {time.monotonic() - speech_at:.2f}s")
-                        self._last_response_latency_log = speech_at
                     self._model_speaking = True
                     self.playback.enqueue(base64.b64decode(inline["data"]))
+
             if content.get("turnComplete"):
                 self._model_speaking = False
+                if self._input_text or self._output_text:
+                    fused = fuse_emotions(
+                        self.current_state.get("arousal"), self.current_state.get("valence"),
+                        hrv_rmssd=self.current_state.get("hrv"),
+                        heart_rate=self.current_state.get("heart_rate") or 70.0,
+                        stress_label=self.current_state.get("stress_state"),
+                        classifier_source="process_1_wesad",
+                    )
+                    self.session_logger.log_entry(
+                        self.current_state.get("heart_rate"), self.current_state.get("hrv"),
+                        fused["arousal"], fused["valence"], fused["label"],
+                        self._input_text, self._output_text,
+                        raw_signal_summary=self._build_scored_context(fused),
+                    )
+                self._output_text = ""
 
     @staticmethod
     def _read_transcript(content, field):
-        """Read exactly one Gemini Live transcript channel.
-
-        Gemini's raw WebSocket payload uses `inputTranscription` and
-        `outputTranscription`. Do not fall back from one channel to another:
-        that makes the user's text appear as the assistant response (or vice
-        versa) when a partial payload is received.
-        """
         value = content.get(field)
         if isinstance(value, str):
             return value.strip()
-        if isinstance(value, dict):
-            text = value.get("text")
-            return text.strip() if isinstance(text, str) else ""
+        if isinstance(value, dict) and isinstance(value.get("text"), str):
+            return value["text"].strip()
         return ""
+
+    @staticmethod
+    def _merge_text(current, addition):
+        if not current:
+            return addition
+        if addition.startswith(current):
+            return addition
+        if current.endswith(addition):
+            return current
+        return f"{current} {addition}".strip()
 
 
 def main():
+    if os.name == "nt":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     try:
         asyncio.run(GeminiLiveEmotionAgent().run())
     except KeyboardInterrupt:

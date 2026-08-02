@@ -1,0 +1,170 @@
+{
+  "session_id": "session_20260802_213205_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-08-02T21:32:05.677679",
+  "duration_seconds": 455.8,
+  "total_records": 7,
+  "records": [
+    {
+      "timestamp_iso": "2026-08-02T21:35:36.458355",
+      "elapsed_seconds": 210.78,
+      "heart_rate_bpm": 56.0,
+      "rmssd_ms": 152.12,
+      "arousal_score": 0.21,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Hello.",
+      "llm_response": "Hi there. How are things going today?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 1.2,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "CALM",
+        "wesad_stress_score_5": 1.0,
+        "arousal_score_5": 1.8,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.3,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:35:46.128663",
+      "elapsed_seconds": 220.45,
+      "heart_rate_bpm": 56.18,
+      "rmssd_ms": 217.92,
+      "arousal_score": 0.386,
+      "valence_score": 0.737,
+      "emotion_label": "calm-positive",
+      "transcript": "I am feeling happy at the moment.",
+      "llm_response": "That's great to hear! Anything in particular making you feel that way?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.5,
+        "valence_score_5": 4.5,
+        "hr_score_5": 1.4,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "WEAK_SIGNAL",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:35:55.285201",
+      "elapsed_seconds": 229.61,
+      "heart_rate_bpm": 68.0,
+      "rmssd_ms": 245.44,
+      "arousal_score": 0.425,
+      "valence_score": 1.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Tell me how I am feeling right?",
+      "llm_response": "Well, based on your voice,",
+      "raw_signal_summary": {
+        "bio_state_score_5": 2.9,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.7,
+        "valence_score_5": 5.0,
+        "hr_score_5": 2.0,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:36:03.617636",
+      "elapsed_seconds": 237.94,
+      "heart_rate_bpm": 76.19,
+      "rmssd_ms": 203.71,
+      "arousal_score": 0.569,
+      "valence_score": 0.0,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "Well, since the signal quality is a bit weak, I can't really tell from the sensors right now. You just mentioned you were feeling happy, but is that still true? How would you describe it?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 3.1,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 3.3,
+        "valence_score_5": 3.0,
+        "hr_score_5": 2.5,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:36:14.608841",
+      "elapsed_seconds": 248.93,
+      "heart_rate_bpm": 74.36,
+      "rmssd_ms": 218.94,
+      "arousal_score": 0.357,
+      "valence_score": -0.843,
+      "emotion_label": "calm-negative",
+      "transcript": "",
+      "llm_response": "I was just",
+      "raw_signal_summary": {
+        "bio_state_score_5": 2.8,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.4,
+        "valence_score_5": 1.3,
+        "hr_score_5": 2.4,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:36:25.482354",
+      "elapsed_seconds": 259.8,
+      "heart_rate_bpm": 52.0,
+      "rmssd_ms": 202.76,
+      "arousal_score": 0.327,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "Can you tell me how",
+      "llm_response": "I was about to say that I can't really tell how you're feeling because the sensor data isn't very clear right now. Would you like to tell me yourself?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 2.8,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.3,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.1,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:37:14.803838",
+      "elapsed_seconds": 309.13,
+      "heart_rate_bpm": 91.95,
+      "rmssd_ms": 190.85,
+      "arousal_score": 0.622,
+      "valence_score": 0.458,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "I apologize, but I can't make out what you said because the signal is still pretty weak. Did you want to try again?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 3.1,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 3.5,
+        "valence_score_5": 3.9,
+        "hr_score_5": 3.4,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    }
+  ]
+}

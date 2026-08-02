@@ -1,0 +1,101 @@
+{
+  "session_id": "session_20260802_211924_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-08-02T21:19:24.374965",
+  "duration_seconds": 360.76,
+  "total_records": 4,
+  "records": [
+    {
+      "timestamp_iso": "2026-08-02T21:20:02.888673",
+      "elapsed_seconds": 38.51,
+      "heart_rate_bpm": 64.63,
+      "rmssd_ms": 148.78,
+      "arousal_score": 0.225,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "Hi there. What's on your mind today?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 1.3,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "CALM",
+        "wesad_stress_score_5": 1.0,
+        "arousal_score_5": 1.9,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.8,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:20:12.520222",
+      "elapsed_seconds": 48.15,
+      "heart_rate_bpm": 60.06,
+      "rmssd_ms": 278.54,
+      "arousal_score": 0.466,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "I am feeling sad right now.",
+      "llm_response": "I'm really sorry to hear that. Would you like to talk about it? Sometimes just sharing can help a little.",
+      "raw_signal_summary": {
+        "bio_state_score_5": 3.0,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.9,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.6,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:20:50.292563",
+      "elapsed_seconds": 85.92,
+      "heart_rate_bpm": 66.52,
+      "rmssd_ms": 203.26,
+      "arousal_score": 0.367,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "I understand you're feeling sad. Even though your body might be showing signs of being active, your feelings are important. Is there anything specific that's making you feel this way?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 2.8,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.5,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.9,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:25:23.785062",
+      "elapsed_seconds": 359.41,
+      "heart_rate_bpm": 66.52,
+      "rmssd_ms": 203.26,
+      "arousal_score": 0.367,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "It sounds like things are tough right now, even if you're managing to keep going. Is there anything specific that's making you feel this way?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 2.8,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.5,
+        "valence_score_5": 3.0,
+        "hr_score_5": 1.9,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "3/3"
+      }
+    }
+  ]
+}

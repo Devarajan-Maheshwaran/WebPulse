@@ -1,0 +1,39 @@
+{
+  "session_id": "session_20260802_202008_volunteer_test_01",
+  "subject_id": "volunteer_test_01",
+  "start_time": "2026-08-02T20:20:08.982035",
+  "duration_seconds": 0.5,
+  "total_records": 2,
+  "records": [
+    {
+      "timestamp_iso": "2026-08-02T20:20:08.982059",
+      "elapsed_seconds": 0.0,
+      "heart_rate_bpm": 72.5,
+      "rmssd_ms": 35.2,
+      "arousal_score": 0.42,
+      "valence_score": 0.65,
+      "emotion_label": "calm-positive",
+      "transcript": "Hello! I am feeling relaxed today after a nice walk.",
+      "llm_response": "That sounds wonderful. Walking is such a pleasant way to unwind.",
+      "raw_signal_summary": {
+        "g_mean": 124.5,
+        "detrend_std": 2.1
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T20:20:09.482855",
+      "elapsed_seconds": 0.5,
+      "heart_rate_bpm": 88.0,
+      "rmssd_ms": 18.4,
+      "arousal_score": 0.82,
+      "valence_score": -0.55,
+      "emotion_label": "aroused-negative",
+      "transcript": "I have a big presentation in ten minutes and I'm really nervous.",
+      "llm_response": "Take a slow deep breath. You are well prepared for this presentation.",
+      "raw_signal_summary": {
+        "g_mean": 126.1,
+        "detrend_std": 4.8
+      }
+    }
+  ]
+}

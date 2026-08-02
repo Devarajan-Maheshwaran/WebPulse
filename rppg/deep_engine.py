@@ -23,10 +23,10 @@ from rppg.hrv import (
 class DeepRPPGEngine:
     """Run EfficientPhys on synchronized forehead and bilateral-cheek ROIs.
 
-    EfficientPhys is a single-ROI temporal model, so each facial region is
-    evaluated through its own 10-frame window. The three resulting BVP
-    predictions are fused only when all three windows are valid; HR, HRV, and
-    WESAD then operate on that one fused signal.
+    EfficientPhys is a single-ROI temporal model, so each available facial
+    region is evaluated through its own 10-frame window. Available BVP
+    predictions are fused; missing regions reduce confidence to WEAK_SIGNAL.
+    HR, HRV, and WESAD operate on that same combined signal.
     """
 
     REQUIRED_ROIS = ("forehead", "left_cheek", "right_cheek")
@@ -119,27 +119,27 @@ class DeepRPPGEngine:
                 # paired with fresh data from the other facial regions.
                 queue.clear()
 
-        if set(usable) != set(self.REQUIRED_ROIS):
+        if not usable:
             return self._result(
-                "INCOMPLETE_ROI", quality_meta, confidence_low=True,
+                "NO_VALID_ROI", quality_meta, confidence_low=True,
                 roi_names=usable,
             )
 
         now = time.time()
         ready = [name for name in self.REQUIRED_ROIS
-                 if len(self.frame_queues[name]) == self.frame_depth + 1]
-        if len(ready) == len(self.REQUIRED_ROIS) and now - self._last_inference_time >= self._min_inference_interval:
+                 if name in usable and len(self.frame_queues[name]) == self.frame_depth + 1]
+        if ready and now - self._last_inference_time >= self._min_inference_interval:
             predictions = {}
             for name in ready:
                 result = self._infer(list(self.frame_queues[name]))
                 if result is not None and result.size:
                     predictions[name] = result
-            if len(predictions) == len(self.REQUIRED_ROIS):
-                # Median fusion suppresses a transient glasses/highlight or
-                # landmark artifact in one ROI while retaining all three.
+            if predictions:
+                # Median fusion suppresses a transient artifact in one ROI;
+                # with one available ROI this naturally becomes that signal.
                 common_length = min(len(result) for result in predictions.values())
                 aligned = np.asarray(
-                    [predictions[name][-common_length:] for name in self.REQUIRED_ROIS],
+                    [predictions[name][-common_length:] for name in self.REQUIRED_ROIS if name in predictions],
                     dtype=np.float64,
                 )
                 fused = np.median(aligned, axis=0)
@@ -150,7 +150,9 @@ class DeepRPPGEngine:
         signal = np.asarray(self.bvp_buffer, dtype=np.float64)
         snr_db, snr_ok = compute_bvp_snr(signal, self.fps)
         low_light = bool(quality_meta.get("is_low_light", False))
-        if low_light and quality_meta.get("mean_brightness", 0) < 24:
+        if len(usable) < len(self.REQUIRED_ROIS):
+            quality = "WEAK_SIGNAL"
+        elif low_light and quality_meta.get("mean_brightness", 0) < 24:
             quality = "POOR_LIGHTING"
         elif len(signal) >= int(self.fps * 4) and not snr_ok:
             quality = "WEAK_SIGNAL"
@@ -172,7 +174,7 @@ class DeepRPPGEngine:
             arousal = self.arousal_smoother.update(temporal_arousal)
         return self._result(quality, quality_meta, confidence_low=quality != "GOOD", hr=hr,
                             rmssd=rmssd, arousal=arousal, stress=stress, snr_db=snr_db,
-                            roi_names=list(self.REQUIRED_ROIS))
+                            roi_names=list(usable))
 
     def _result(self, quality, meta, confidence_low, hr=None, rmssd=None, arousal=None,
                 stress="NORMAL", snr_db=0.0, roi_names=None):

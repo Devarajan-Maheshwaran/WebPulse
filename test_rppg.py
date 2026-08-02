@@ -81,7 +81,7 @@ def run_live_webcam_test():
                 break
 
             frame_count += 1
-            roi_crop, roi_box, method = capturer.extract_roi(frame)
+            roi_crop, full_face_box, roi_box, method, quality_meta = capturer.extract_roi(frame)
 
             # Visual overlay on camera feed
             display_frame = frame.copy()

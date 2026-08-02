@@ -1,0 +1,3 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-08-02T20:47:51.858300,0.0,72.5,35.2,0.42,0.65,calm-positive,Hello! I am feeling relaxed today after a nice walk.,That sounds wonderful. Walking is such a pleasant way to unwind.
+2026-08-02T20:47:52.359037,0.5,88.0,18.4,0.82,-0.55,aroused-negative,I have a big presentation in ten minutes and I'm really nervous.,Take a slow deep breath. You are well prepared for this presentation.

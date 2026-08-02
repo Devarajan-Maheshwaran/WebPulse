@@ -326,19 +326,22 @@ def run_rppg_server():
                     quality_status = deep_res.get("quality_status", "GOOD")
                     bvp_history.append(deep_res.get("predicted_bvp", 0.0))
                 else:
-                    # Classical fallback also requires all three regions so
-                    # it has the same ROI contract as EfficientPhys/WESAD.
-                    if rois is not None and all(
-                        rois[name]["status"] == "USABLE" for name in fallback_roi_names
-                    ):
-                        for name in fallback_roi_names:
+                    # Classical fallback combines every currently usable ROI.
+                    # Missing regions are cleared and lower confidence rather
+                    # than stopping the stream or reusing stale samples.
+                    active_fallback_rois = []
+                    for name in fallback_roi_names:
+                        if rois is not None and rois[name]["status"] == "USABLE":
                             g_val = extract_roi_green_channel(rois[name]["crop"])
                             if g_val is not None:
                                 raw_g_signals[name].append(g_val)
-                        if all(raw_g_signals[name] for name in fallback_roi_names):
-                            bvp_history.append(float(np.median([
-                                raw_g_signals[name][-1] for name in fallback_roi_names
-                            ])))
+                                active_fallback_rois.append(name)
+                        else:
+                            raw_g_signals[name].clear()
+                    if active_fallback_rois:
+                        bvp_history.append(float(np.median([
+                            raw_g_signals[name][-1] for name in active_fallback_rois
+                        ])))
                     if quality_meta.get("is_low_light"):
                         quality_status = "POOR_LIGHTING"
 
@@ -352,11 +355,13 @@ def run_rppg_server():
             if elapsed > 0:
                 fps_estimate = frame_count / elapsed
 
-            if deep_engine is None and all(
-                len(raw_g_signals[name]) >= int(fps_estimate * 3) for name in fallback_roi_names
-            ):
+            ready_fallback_rois = [
+                name for name in fallback_roi_names
+                if len(raw_g_signals[name]) >= int(fps_estimate * 3)
+            ]
+            if deep_engine is None and ready_fallback_rois:
                 filtered_rois = []
-                for name in fallback_roi_names:
+                for name in ready_fallback_rois:
                     detrended = detrend_signal(raw_g_signals[name])
                     filtered_rois.append(butterworth_bandpass_filter(detrended, fps=fps_estimate))
                 common_length = min(len(signal) for signal in filtered_rois)
@@ -375,6 +380,10 @@ def run_rppg_server():
                     prediction.get("stress_state", "NORMAL"),
                     prediction.get("arousal_score", raw_arousal),
                 )
+                if len(ready_fallback_rois) < len(fallback_roi_names):
+                    quality_status = "WEAK_SIGNAL"
+            elif deep_engine is None and face_detected:
+                quality_status = "WEAK_SIGNAL"
 
             with hud_lock:
                 hud_state["heart_rate"] = current_hr
@@ -384,6 +393,10 @@ def run_rppg_server():
                 hud_state["face_detected"] = face_detected
                 hud_state["quality_status"] = quality_status
                 hud_state["backend_used"] = backend_used
+                if deep_res:
+                    hud_state["roi_count"] = deep_res.get("roi_count", 0)
+                else:
+                    hud_state["roi_count"] = len(fallback_roi_names) if (face_detected and rois and all(rois.get(n, {}).get("status") == "USABLE" for n in fallback_roi_names)) else 0
                 current_hud_snapshot = hud_state.copy()
 
             # Broadcast metrics over TCP every 1 second
@@ -401,8 +414,8 @@ def run_rppg_server():
                     "quality_status": quality_status,
                     "execution_provider": hud_state.get("execution_provider", "Unknown"),
                     "snr_db": deep_res.get("snr_db") if deep_res else None,
-                    "roi_names": deep_res.get("roi_names", []) if deep_res else list(fallback_roi_names),
-                    "roi_count": deep_res.get("roi_count", 0) if deep_res else len(fallback_roi_names),
+                    "roi_names": deep_res.get("roi_names", []) if deep_res else ready_fallback_rois,
+                    "roi_count": deep_res.get("roi_count", 0) if deep_res else len(ready_fallback_rois),
                 }
                 server.broadcast(payload)
                 broker_publisher.publish(payload)

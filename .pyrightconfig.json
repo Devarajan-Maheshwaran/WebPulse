@@ -1,0 +1,8 @@
+{
+  "venvPath": "C:\\Users\\user\\anaconda3\\envs",
+  "venv": "webpulse",
+  "pythonVersion": "3.10",
+  "extraPaths": [
+    "C:\\Users\\user\\anaconda3\\envs\\webpulse\\Lib\\site-packages"
+  ]
+}

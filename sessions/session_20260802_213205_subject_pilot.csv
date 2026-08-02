@@ -1,0 +1,8 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-08-02T21:35:36.458355,210.78,56.0,152.12,0.21,0.0,calm-positive,Hello.,Hi there. How are things going today?
+2026-08-02T21:35:46.128663,220.45,56.18,217.92,0.386,0.737,calm-positive,I am feeling happy at the moment.,That's great to hear! Anything in particular making you feel that way?
+2026-08-02T21:35:55.285201,229.61,68.0,245.44,0.425,1.0,calm-positive,Tell me how I am feeling right?,"Well, based on your voice,"
+2026-08-02T21:36:03.617636,237.94,76.19,203.71,0.569,0.0,aroused-positive,,"Well, since the signal quality is a bit weak, I can't really tell from the sensors right now. You just mentioned you were feeling happy, but is that still true? How would you describe it?"
+2026-08-02T21:36:14.608841,248.93,74.36,218.94,0.357,-0.843,calm-negative,,I was just
+2026-08-02T21:36:25.482354,259.8,52.0,202.76,0.327,0.0,calm-positive,Can you tell me how,I was about to say that I can't really tell how you're feeling because the sensor data isn't very clear right now. Would you like to tell me yourself?
+2026-08-02T21:37:14.803838,309.13,91.95,190.85,0.622,0.458,aroused-positive,,"I apologize, but I can't make out what you said because the signal is still pretty weak. Did you want to try again?"

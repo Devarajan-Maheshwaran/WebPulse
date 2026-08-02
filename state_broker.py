@@ -20,6 +20,10 @@ class StateStore:
         with self.lock:
             self.latest = dict(state)
             targets = list(self.subscribers)
+        hr = state.get("heart_rate")
+        hr_str = f"{hr:.1f} BPM" if hr is not None else "Calibrating"
+        stress = state.get("stress_state", "NORMAL")
+        print(f"[State Broker] Broadcast state -> HR: {hr_str} | Stress: {stress} | Subscribers: {len(targets)}")
         failed = []
         for client in targets:
             try:
@@ -35,12 +39,19 @@ class StateStore:
         with self.lock:
             self.subscribers.add(client)
             latest = dict(self.latest)
+            sub_count = len(self.subscribers)
+        print(f"[State Broker] Client subscribed (Total active subscribers: {sub_count})")
         if latest:
-            client.sendall((json.dumps(latest, separators=(",", ":")) + "\n").encode("utf-8"))
+            try:
+                client.sendall((json.dumps(latest, separators=(",", ":")) + "\n").encode("utf-8"))
+            except OSError:
+                pass
 
     def unsubscribe(self, client):
         with self.lock:
             self.subscribers.discard(client)
+            sub_count = len(self.subscribers)
+        print(f"[State Broker] Client unsubscribed (Remaining subscribers: {sub_count})")
 
 
 STORE = StateStore()

@@ -16,9 +16,12 @@ except ImportError:
     pass
 
 SYSTEM_PROMPT = (
-    "You are WebPulse, a warm, conversational live companion. Respond in short, natural turns "
-    "(one or two complete sentences), acknowledge what the person said, and use body and voice "
-    "signals as context rather than a diagnosis. Never claim to know a person's health or mood with certainty."
+    "You are WebPulse, an empathetic conversational companion for HCI research at Midori Sugaya Sensei's Lab (Shibaura Institute of Technology).\n"
+    "Strict Rules:\n"
+    "1. Respond in 1-2 short, natural sentences directly addressing what the person said.\n"
+    "2. NEVER assume or claim how the user feels or sounds (e.g. NEVER say 'you sound peaceful', 'you sound sad', or 'you look calm') unless they explicitly said so.\n"
+    "3. Use the 0-5 bio-state score strictly to adapt your tone: be extra gentle, supportive, and soothing when bio_state_score_5 is high (> 3.5), and warm/conversational otherwise.\n"
+    "4. If bio_state_score_5 is 0.0 (UNAVAILABLE) or signal quality is WEAK_SIGNAL, treat telemetry as unavailable and do not mention physical signals."
 )
 
 
@@ -45,30 +48,51 @@ def construct_prompt(emotion_info, transcript):
     elif quality == "WEAK_SIGNAL":
         quality_note = "\n[Signal Note: Facial rPPG signal quality is weak; respond gently without claiming precise physical state.]"
 
+    scored = emotion_info.get("scored_context_5") or {}
+    bio_score = scored.get("bio_state_score_5", 0.0)
+    bio_label = scored.get("bio_state_label", "UNAVAILABLE")
+    hr_score = scored.get("hr_score_5", 3.0)
+    hrv_score = scored.get("hrv_stress_load_5", 3.0)
+    wesad_score = scored.get("wesad_stress_score_5", 3.0)
+    arousal_score_5 = scored.get("arousal_score_5", round(1.0 + 4.0 * arousal, 1))
+    valence_score_5 = scored.get("valence_score_5", round(1.0 + 2.0 * (valence + 1.0), 1))
+
     state = {
-        "heart_rate": hr,
-        "hrv_rmssd": rmssd,
+        "heart_rate": hr_str,
+        "hrv_rmssd": hrv_str,
         "wesad_stress_label": stress_label,
-        "arousal_score": arousal,
         "signal_quality": quality,
         "voice_valence": valence,
         "transcript": user_speech,
+        "telemetry_scores_0_to_5": {
+            "bio_state_score_5": bio_score,
+            "bio_state_label": bio_label,
+            "wesad_stress_score_5": wesad_score,
+            "arousal_score_5": arousal_score_5,
+            "valence_score_5": valence_score_5,
+            "hr_score_5": hr_score,
+            "hrv_stress_load_5": hrv_score,
+        }
     }
+
     prompt = f"""[System Instruction]
 {SYSTEM_PROMPT}
 
-[Grounded live state]
+[Grounded Human Bio-Telemetry (0-5 Ordinal Scale)]
 {state}
-Plain-language interpretation: {desc or ('calm' if arousal < 0.5 else 'elevated')} ({stress_label.lower()})
-Live Heart Rate: {hr_str} | HRV (RMSSD): {hrv_str}
-Physiological Arousal: {arousal:.2f} (0.0=Calm, 1.0=Stressed)
-Voice Tone Valence: {valence:+.2f} (-1.0=Negative, +1.0=Positive)
+Interpretation: {desc or ('calm' if arousal < 0.5 else 'elevated')} ({stress_label.lower()})
+Bio-State Score (0-5): {bio_score} / 5.0 ({bio_label})
+Physiological Arousal Score (1-5): {arousal_score_5} / 5.0 (raw: {arousal:.2f})
+Voice Tone Valence Score (1-5): {valence_score_5} / 5.0 (raw: {valence:+.2f})
+WESAD Stress Score (1-5): {wesad_score} / 5.0 ({stress_label})
+Heart Rate Score (1-5): {hr_score} / 5.0 ({hr_str})
+HRV Stress Load Score (1-5): {hrv_score} / 5.0 ({hrv_str})
 Signal quality: {quality}{quality_note}
 
 [User Speech Input]
 "{user_speech}"
 
-Respond directly in a warm, responsive live-assistant style. Be cautious and say you may be unsure when signal quality is weak or lighting is poor."""
+Respond directly in a warm, responsive live-assistant style. Adapt your tone based on the 0-5 bio-state score and user speech."""
     return prompt
 
 
@@ -151,6 +175,8 @@ class LLMResponseGenerator:
                 response = model.generate_content(prompt)
                 if response and response.text:
                     return response.text.strip()
+            except ImportError:
+                return self.generate_offline_fallback(emotion_info, transcript)
             except Exception as e:
                 print(f"[LLM API WARNING] Legacy Gemini API issue. Using offline fallback.")
                 return self.generate_offline_fallback(emotion_info, transcript)
@@ -171,6 +197,8 @@ class LLMResponseGenerator:
                     max_tokens=250
                 )
                 return response.choices[0].message.content.strip()
+            except ImportError:
+                return self.generate_offline_fallback(emotion_info, transcript)
             except Exception as e:
                 print(f"[LLM API WARNING] OpenAI API issue: {e}. Using offline fallback.")
                 return self.generate_offline_fallback(emotion_info, transcript)
@@ -188,6 +216,8 @@ class LLMResponseGenerator:
                     messages=[{"role": "user", "content": prompt}]
                 )
                 return response.content[0].text.strip()
+            except ImportError:
+                return self.generate_offline_fallback(emotion_info, transcript)
             except Exception as e:
                 print(f"[LLM API WARNING] Anthropic API issue: {e}. Using offline fallback.")
                 return self.generate_offline_fallback(emotion_info, transcript)

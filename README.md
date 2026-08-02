@@ -1,183 +1,270 @@
-# WebPulse
+# WebPulse · Multimodal Affective Computing
 
-WebPulse is a local, real-time multimodal affective-computing research prototype. It estimates cardiac activity from a webcam using EfficientPhys-based remote photoplethysmography (rPPG), derives heart-rate variability (HRV/PRV) features, classifies physiological stress with a WESAD-trained RandomForest, estimates voice valence, and provides a spoken Gemini Live companion.
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&size=18&duration=2800&pause=900&color=2EA44F&center=true&vCenter=true&width=720&lines=Contactless+physiology+%2B+voice+%2B+live+interaction;EfficientPhys+%C3%97+forehead+%2B+bilateral+cheeks;Built+for+transparent+HCI+research" alt="WebPulse research summary animation" />
+</p>
 
-The system is intended for HCI research and interaction prototyping. Its camera and audio estimates are uncertain context signals, not medical measurements, diagnosis, or clinical monitoring.
+![Status](https://img.shields.io/badge/status-research%20prototype-2ea44f?style=flat-square) ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20AMD%20DirectML-0078d4?style=flat-square) ![Runtime](https://img.shields.io/badge/runtime-Python%203.11-3776ab?style=flat-square) ![Output](https://img.shields.io/badge/Gemini%20Live-native%20audio-8e75b2?style=flat-square)
 
-## Research Positioning
+WebPulse is a local, real-time HCI research prototype for affect-aware interaction. It combines camera-based remote photoplethysmography (rPPG), HR/HRV features, a WESAD-trained stress classifier, voice valence, and a Gemini Live spoken companion. The system is designed for research and interaction prototyping; it is not a medical device and does not diagnose stress, emotion, or health conditions.
 
-The design is informed by:
+> 🟢 **Live path:** webcam → multi-ROI EfficientPhys → fused BVP → HR/HRV → WESAD → local broker → Gemini Live context → native audio response
 
-- Liu et al., *EfficientPhys* and the [rPPG-Toolbox](https://github.com/ubicomplab/rPPG-Toolbox): efficient deep remote-PPG inference and evaluation patterns.
-- Schmidt et al., [WESAD](https://ubi29.informatik.uni-siegen.de/usi/data_wesad.html): wearable stress and affect labels used to train the local HRV classifier.
-- Russell, [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714): arousal–valence representation used by fusion.
-- Ikeda, Horie, and Sugaya, [Estimating Emotion with Biological Information for Robot Interaction](https://doi.org/10.1016/j.procs.2017.08.198): conceptual motivation for mapping biological indices into interaction-facing affect.
-- Ziaratnia, Laohakangvalvit, Sugaya, and Sripian, [Multimodal Deep Learning for Remote Stress Estimation Using CCT-LSTM](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html): motivation for explicit modality branches and temporal stabilization.
+## Research scope
 
-WebPulse does not claim to reproduce CCT-LSTM, train on UBFC-Phys, or achieve the reported paper results. It is a lightweight engineering implementation using EfficientPhys, WESAD-derived HRV classification, voice features, and temporal fusion.
+The implementation is conceptually informed by the following work:
 
-## System Architecture
+| Area | Reference | Design influence |
+|---|---|---|
+| Deep rPPG | Liu et al., [EfficientPhys, WACV 2023](https://openaccess.thecvf.com/content/WACV2023/html/Liu_EfficientPhys_Enabling_Simple_Fast_and_Accurate_Camera-Based_Cardiac_Measurement_WACV_2023_paper.html) and [rPPG-Toolbox, NeurIPS 2023](https://proceedings.neurips.cc/paper_files/paper/2023/hash/d7d0d548a6317407e02230f15ce75817-Abstract-Datasets_and_Benchmarks.html) | Lightweight remote cardiac-signal inference and evaluation framing. |
+| HRV and stress | Schmidt et al., [WESAD, ICMI 2018](https://ubi29.informatik.uni-siegen.de/usi/data_wesad.html) | Three-class stress/affect framing and HRV feature use. |
+| Physiological interaction | Ikeda, Horie, and Sugaya, [Estimating Emotion with Biological Information for Robot Interaction](https://doi.org/10.1016/j.procs.2017.08.198) | Mapping biological indices into an interaction-facing affect state. |
+| Multimodal affect | Ziaratnia et al., [CCT-LSTM remote stress estimation, WACV 2024](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html) | Explicit modality separation and temporal-stability motivation. |
+| Emotion representation | Russell, [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714) | Arousal–valence fusion space. |
 
-The runtime is split into three local processes so camera inference, IPC, and network/audio I/O do not block one another:
+WebPulse does **not** reproduce CCT-LSTM, train on UBFC-Phys, or claim the reported paper results. It is a practical implementation using EfficientPhys, WESAD-derived HRV classification, voice features, and deterministic temporal stabilization.
 
-```text
-Process 1: Camera + rPPG + WESAD
-  Webcam -> MediaPipe ROIs -> EfficientPhys x3 -> median BVP
-          -> HR + RMSSD/PRV -> WESAD stress/arousal -> localhost:5003
+## Architecture
 
-Process 3: State broker
-  localhost:5003 -> latest-only in-memory physiological state
-
-Process 2: Gemini Live companion
-  Microphone -> PCM WebSocket input
-  Broker state -> labeled 0–5 context -> Gemini Live
-  Gemini native audio -> low-latency speaker queue
+```mermaid
+flowchart LR
+    CAM["📷 Webcam"] --> MP["MediaPipe FaceLandmarker"]
+    MP --> ROI["Forehead + left cheek + right cheek"]
+    ROI --> EP["EfficientPhys × available ROIs\nONNX Runtime / DirectML"]
+    EP --> FUSE["Median BVP fusion"]
+    FUSE --> HR["FFT HR + pulse peaks + RMSSD"]
+    HR --> WESAD["WESAD RandomForest\nCALM / NORMAL / STRESSED"]
+    WESAD --> BROKER["State broker\n127.0.0.1:5003"]
+    MIC["🎙 Microphone\n16 kHz PCM"] --> LIVE["Gemini Live WebSocket"]
+    BROKER --> LIVE
+    LIVE --> SPK["🔊 Native 24 kHz audio"]
+    LIVE --> HUD["HUD transcripts + emotion state"]
 ```
 
-### Process 1: camera and physiological pipeline
+The runtime uses three local processes:
 
-Entry point: [rppg/rppg_server.py](rppg/rppg_server.py)
+| Process | Entry point | Responsibility |
+|---|---|---|
+| 1 · Vision | `python -m rppg.rppg_server` | Webcam, face landmarks, ROI quality, EfficientPhys, fused BVP, HR/HRV, WESAD, HUD. |
+| 3 · Broker | `python state_broker.py` | Latest-only in-memory IPC. No disk polling or text-file synchronization. |
+| 2 · Live agent | `python app.py` | Microphone, Gemini WebSocket, context injection, native audio playback, transcription, barge-in. |
 
-1. OpenCV captures the webcam stream.
-2. MediaPipe FaceLandmarker detects the face and extracts three named regions:
-   - `forehead`
-   - `left_cheek`
-   - `right_cheek`
-3. Each region is checked for usable pixels, occlusion, brightness, and temporal validity.
-4. The capture layer passes raw ROI crops to the model layer. Enhancement is applied exactly once immediately before EfficientPhys normalization; this avoids double CLAHE/gamma processing.
-5. EfficientPhys is run separately on each ROI's synchronized temporal window. The default window is 10 frames plus the preceding frame required by the exported model's temporal-difference operation.
-6. A window is accepted only when all three ROI queues are valid and ready. If one region is occluded, its queue is cleared so stale data cannot be paired with fresh data from another region.
-7. The three EfficientPhys BVP outputs are aligned and fused with a per-sample median. Median fusion reduces the effect of a transient glasses reflection, highlight, hair occlusion, or landmark error while retaining forehead and both cheeks.
-8. HR is estimated from the fused BVP using FFT within the configured physiological band. Pulse peaks from the same fused BVP produce RMSSD.
-9. The same fused HR/HRV result is passed to the WESAD classifier. WESAD is not run independently on only the forehead or on a separate single-cheek stream.
-10. A lightweight three-level temporal stabilizer rejects isolated WESAD state changes and accepts sustained changes. The resulting state is `CALM`, `NORMAL`, or `STRESSED`.
-
-Implementation: [rppg/capture.py](rppg/capture.py), [rppg/deep_engine.py](rppg/deep_engine.py), [rppg/hrv.py](rppg/hrv.py).
-
-### EfficientPhys inference
-
-[rppg/deep_engine.py](rppg/deep_engine.py) loads `weights/efficientphys.onnx` with ONNX Runtime. `DmlExecutionProvider` is preferred on Windows, with `CPUExecutionProvider` as fallback. Each raw BGR crop is converted to RGB, resized to 72×72, scaled to `[0, 1]`, and transposed to channel-first format before inference.
-
-The model is a single-ROI temporal model, so “three-region EfficientPhys” means three synchronized model evaluations followed by robust signal fusion—not an unsupported change to the ONNX input shape. This preserves compatibility with the exported model.
-
-The server startup output must identify the active backend and provider. A healthy deep path should report:
+### Minimal data path
 
 ```text
-EfficientPhys execution: GPU (DirectML)
+Webcam
+  -> Face landmarks
+  -> Forehead + both cheek ROIs
+  -> EfficientPhys + median BVP fusion
+  -> HR / HRV + WESAD stress state
+  -> Local state broker
+  -> 1-to-5 scored physiology context
+  -> Gemini Live WebSocket
+  -> Native audio response + HUD
+
+Microphone ------------------------------------------------┘
 ```
 
-CPU fallback is supported but may reduce frame rate.
+The broker transports the latest physiological state locally. The Live agent is the
+conversion boundary: it converts the current HR, HRV, arousal, valence, stress, signal
+quality, and ROI coverage into labeled 1-to-5 context fields before sending them to the
+conversation model. A fixed ten-entry, latest-first memory buffer holds these scored
+snapshots; every new sample evicts the oldest one, and answer-time context uses the
+newest entry. Raw sensor values remain local to the research pipeline.
 
-### HR, HRV, and WESAD
+## Vision and ROI implementation
 
-[rppg/hrv.py](rppg/hrv.py) computes:
+### Face regions
 
-- heart rate in BPM from the fused BVP spectrum;
-- pulse peaks using physiological distance and prominence constraints;
-- RMSSD from successive valid inter-beat intervals;
-- arousal from bounded HRV mapping when required.
+[rppg/capture.py](rppg/capture.py) creates three independently quality-checked regions:
 
-[fusion/wesad_classifier.py](fusion/wesad_classifier.py) uses the existing trained artifact at `fusion/models/wesad_hrv_classifier.pkl`. Its feature vector is:
+- `forehead`
+- `left_cheek`
+- `right_cheek`
+
+MediaPipe landmarks define the regions; Haar geometry is available as a fallback. Each region carries its crop, bounding box, brightness, variance, and status. Crops remain raw until the model preprocessing stage so enhancement is not applied twice.
+
+### EfficientPhys
+
+[rppg/deep_engine.py](rppg/deep_engine.py) loads `weights/efficientphys.onnx` through ONNX Runtime. Verified model metadata on the target environment:
 
 ```text
-[RMSSD in ms, estimated SDNN in ms, mean HR in BPM]
+Input:  video_frames ['num_frames', 3, 72, 72] float32
+Output: bvp_pred    ['output_samples', 1] float32
+Providers: DmlExecutionProvider, CPUExecutionProvider
 ```
 
-The classifier returns a three-level stress label, arousal score, confidence, and source. The current artifact is not retrained during live execution. The same fused physiological window drives both HRV-derived metrics and WESAD, ensuring the model does not receive a different ROI subset than the HR estimator.
+The exported EfficientPhys model is a single-ROI temporal model. Therefore the implementation evaluates each currently usable facial region independently using its own temporal queue, then combines the resulting BVP predictions. It does not incorrectly change the ONNX input shape to mix unrelated regions.
 
-### Multimodal fusion
+Processing sequence:
 
-[fusion/emotion.py](fusion/emotion.py) combines:
+1. Capture one raw crop per available ROI.
+2. Clear a region’s queue when that region becomes unusable; stale samples are never reused.
+3. Apply enhancement, RGB conversion, resize to 72×72, `[0,1]` scaling, and channel-first conversion once.
+4. Run the EfficientPhys temporal model for each ready ROI.
+5. Align available outputs and apply per-sample median fusion. With one available ROI, the median is that ROI; with two or three, it suppresses isolated regional artifacts.
+6. Append the fused BVP to the temporal signal buffer.
 
-- body modality: fused rPPG HR/HRV, WESAD stress, and physiological arousal;
-- audio modality: voice valence derived from microphone features and speech content;
-- dimensional state: one of `calm-positive`, `calm-negative`, `aroused-positive`, or `aroused-negative`.
+Coverage policy:
 
-The temporal stabilizer is intentionally small and CPU-friendly. It is a smoothing and state-consistency mechanism inspired by the temporal role of recurrent stages in multimodal affect models; it is not a CCT-LSTM replacement.
+| Coverage | Runtime behavior |
+|---:|---|
+| `3/3` | Full forehead and bilateral-cheek coverage; normal confidence policy. |
+| `2/3` | Continue with the two available regions; mark `WEAK_SIGNAL`. |
+| `1/3` | Continue with the one available region; mark `WEAK_SIGNAL`. |
+| `0/3` | No new physiological estimate; mark `NO_VALID_ROI`. |
 
-### Process 3: state broker
+The camera log and HUD expose coverage as `ROIs: n/3` and `ROI coverage n/3`.
 
-[state_broker.py](state_broker.py) is a localhost TCP broker on `127.0.0.1:5003`. It stores the latest state in memory and forwards updates to subscribers. No state files or disk polling are used for live IPC. Process 1 publishes approximately once per second; Process 2 consumes the latest available state without waiting for camera inference.
+## HR/HRV and WESAD
 
-### Process 2: Gemini Live audio companion
+[rppg/hrv.py](rppg/hrv.py) operates on the single fused BVP stream:
 
-Entry point: [live_emotion_agent.py](live_emotion_agent.py), launched through [app.py](app.py).
+- FFT estimates HR in the configured physiological frequency range.
+- Peak detection estimates beat intervals.
+- RMSSD is calculated from valid successive inter-beat intervals.
+- Arousal is bounded and smoothed over time.
 
-- Loads `GEMINI_API_KEY` from `.env`.
-- Maintains one persistent asynchronous WebSocket session.
-- Streams 16 kHz, mono, signed 16-bit PCM microphone chunks through `realtimeInput`.
-- Sends physiological context through `clientContent` with `turnComplete: false`, so background state does not independently trigger speech.
-- Pushes context at a two-second background cadence and again at speech start/end so the user's current turn is paired with recent state.
-- Requests native Gemini audio and writes received 24 kHz PCM frames to a low-latency speaker queue.
-- Clears the speaker queue immediately when `serverContent.interrupted` is received.
-- Separates `inputTranscription` into the `VOICE` HUD panel and `outputTranscription` into the `COMPANION` panel.
+[fusion/wesad_classifier.py](fusion/wesad_classifier.py) loads `fusion/models/wesad_hrv_classifier.pkl`. The trained feature vector is:
 
-Gemini receives an abstracted labeled context rather than raw physiological values. The payload includes stress, arousal, valence, heart-rate category, HRV stress-load category, signal quality, and bounded 0–5 scores. Raw BPM and RMSSD remain inside the local process for display and computation.
+```text
+[RMSSD (ms), estimated SDNN (ms), mean HR (BPM)]
+```
 
-## Running the Project
+WESAD receives HR/HRV computed from the same combined forehead/cheek BVP used for the HR display. It is not run separately on only the forehead or on an unrelated cheek signal. [fusion/emotion.py](fusion/emotion.py) adds a small temporal stabilizer so one isolated WESAD classification cannot cause a visible stress-state jump; sustained changes are accepted.
 
-Use the project’s virtual environment and install [requirements.txt](requirements.txt):
+## Multimodal fusion and scored context
+
+The body modality contains fused rPPG HR/HRV, WESAD stress/arousal, ROI coverage, and signal quality. The audio modality contains microphone-derived valence and the user's spoken turn. Fusion uses a Russell-style arousal–valence quadrant:
+
+```text
+low arousal  + positive valence = calm-positive
+low arousal  + negative valence = calm-negative
+high arousal + positive valence = aroused-positive
+high arousal + negative valence = aroused-negative
+```
+
+Before Gemini receives physiology, [live_emotion_agent.py](live_emotion_agent.py) converts it into interpretable bounded scores:
+
+- `bio_state_score_5`: 0 when unreliable, 1 very calm, 3 moderate, 5 high activation/stress;
+- `wesad_stress_score_5`: CALM=1, NORMAL=3, STRESSED=5;
+- `arousal_score_5`: normalized activation;
+- `valence_score_5`: negative-to-positive voice tone;
+- `hr_score_5`: bounded HR category score;
+- `hrv_stress_load_5`: inverse HRV calmness/stress-load score;
+- `signal_quality` and `roi_coverage`.
+
+Raw BPM and RMSSD remain local processing values and are not sent in the model-facing Live context.
+
+## Gemini Live implementation
+
+[live_emotion_agent.py](live_emotion_agent.py) is the active audio/LLM path. It:
+
+- loads `GEMINI_API_KEY` from `.env`;
+- opens one persistent authenticated Gemini Live WebSocket;
+- requests native `AUDIO` output with the configured prebuilt voice;
+- streams mono, signed 16-bit, 16 kHz PCM through `realtimeInput`;
+- injects physiological data through `clientContent` with `turnComplete: false`;
+- sends context every two seconds and at speech start/end;
+- routes incoming native PCM to a low-latency 24 kHz speaker queue;
+- immediately clears the queue on `serverContent.interrupted` for barge-in;
+- separates `inputTranscription` into `VOICE` and `outputTranscription` into `COMPANION`;
+- logs completed turns to the existing session logger.
+
+The legacy modules [llm/prompt.py](llm/prompt.py), [llm/transcribe.py](llm/transcribe.py), [llm/tts.py](llm/tts.py), and [audio/audio_server.py](audio/audio_server.py) remain compatibility/diagnostic code. They are not started by `app.py` and are not part of the active Live path.
+
+## AMD Windows verification
+
+The target conda environment was checked on the AMD Ryzen 7 7000-series integrated-graphics laptop:
+
+```text
+Python       3.11.15
+OpenCV       4.11.0
+MediaPipe    1.0.0
+ONNX Runtime 1.24.4
+DirectML     available and selected
+sounddevice  0.5.5
+websockets   16.1.1
+```
+
+DirectML is the intended acceleration route for the integrated AMD graphics device. CPU fallback remains available if DirectML initialization fails. This confirms backend availability; it does not constitute physiological accuracy validation. Accuracy still requires reference-sensor comparison and subject-independent evaluation.
+
+## Installation and run
+
+Create or activate the project environment and install [requirements.txt](requirements.txt):
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-Create `.env` with at least:
+Create `.env`:
 
 ```text
 GEMINI_API_KEY=your_key_here
+GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
+GEMINI_LIVE_VOICE=Puck
+RPPG_BACKEND=deep
 ```
 
-Start three PowerShell terminals from the project root, in this order:
+Open three PowerShell terminals at the project root:
 
 ```powershell
-# Terminal 1: state broker
+# Terminal 1
 python state_broker.py
-```
 
-```powershell
-# Terminal 2: camera/rPPG/WESAD process
+# Terminal 2
 python -m rppg.rppg_server
-```
 
-```powershell
-# Terminal 3: Gemini Live/audio process
+# Terminal 3
 python app.py
 ```
 
-Press `q` in the camera window to stop the vision process. The camera process should report the active ROI/backend state and periodically print HR, arousal, stress, signal quality, and ROI coverage.
-
-Useful environment settings include:
+Expected checks:
 
 ```text
-RPPG_BACKEND=deep
-GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
-GEMINI_LIVE_VOICE=Puck
+[Deep rPPG] EfficientPhys execution: GPU (DirectML)
+[rPPG Server (...)] ... | ROIs: 3/3
+[State Broker] Broadcast state ...
+[Live Agent] Gemini Live connected (..., Puck).
 ```
 
-Set `RPPG_BACKEND=classical` only for diagnostics; the classical fallback also requires forehead, left-cheek, and right-cheek samples before calculating its fused signal.
+Press `q` in the camera window to stop Process 1. Use `RPPG_BACKEND=classical` only for diagnostic comparison; the active research path is EfficientPhys.
 
-## Verification
-
-Static and component checks:
+## Verification commands
 
 ```powershell
-python -m py_compile rppg\capture.py rppg\deep_engine.py rppg\rppg_server.py fusion\emotion.py live_emotion_agent.py
+python -m py_compile live_emotion_agent.py rppg\capture.py rppg\deep_engine.py rppg\rppg_server.py rppg\hud.py fusion\emotion.py
 python -m pytest -q test_fusion.py
 ```
 
-Runtime verification should confirm:
+The runtime smoke checks used for this version verified the ONNX input/output metadata, DirectML provider selection, Live setup payload, all-three-ROI inference, `WEAK_SIGNAL` behavior at partial coverage, and `NO_VALID_ROI` behavior at zero coverage.
 
-- all three ROI names are present and usable during accepted windows;
-- `roi_count` is `3` in state messages;
-- the backend is `efficientphys_onnx`;
-- DirectML is active when available;
-- `quality_status` is `GOOD` before interpreting HRV/stress changes;
-- WESAD receives the fused HRV result and reports its source/confidence;
-- the Gemini process reports broker connection and Live WebSocket connection.
+## Proof of work
 
-## Limitations
+The following runtime captures document the working research prototype: live EfficientPhys inference, full three-region coverage, HR/HRV output, WESAD state classification, voice interaction, and Gemini Live responses.
 
-Camera rPPG is sensitive to lighting, motion, skin-region occlusion, camera exposure, glasses reflections, and face tracking quality. RMSSD requires sufficiently clean pulse peaks over a meaningful temporal window; a displayed value during weak signal should not be interpreted as reliable. The WESAD artifact is a research classifier and may require calibration or retraining for a new population, camera, environment, and task.
+### Calm state with good signal
 
-The project does not claim clinical accuracy, direct CCT-LSTM implementation, UBFC-Phys training, or universal emotion recognition. A research evaluation should compare HR against a reference pulse sensor, report ROI coverage and signal-quality exclusions, and evaluate stress classification using subject-independent validation.
+![WebPulse calm state with good signal](docs/evidence/webpulse-calm-good-signal.png)
+
+Demonstrates `GOOD` signal quality, `3/3` ROI coverage, live HR/HRV values, a calm WESAD state, and a spoken emotion query with a companion response.
+
+### Normal state with good signal
+
+![WebPulse normal state with good signal](docs/evidence/webpulse-normal-good-signal.png)
+
+Demonstrates the same live pipeline under a changing normal physiological state while maintaining full forehead and bilateral-cheek coverage.
+
+### Live emotion query
+
+![WebPulse live emotion query](docs/evidence/webpulse-live-emotion-query.png)
+
+Demonstrates a natural-language question being transcribed in the Voice panel and answered in the Companion panel using the current physiological context.
+
+## Limitations and research next steps
+
+Lighting, motion, camera exposure, glasses reflections, landmark errors, skin-region visibility, and individual physiology affect rPPG quality. RMSSD is only meaningful when the fused pulse contains reliable beat peaks. The WESAD classifier is a research artifact and may require recalibration for a new population, task, camera, and environment.
+
+For a research submission, report ROI coverage, signal-quality exclusions, HR error against a reference pulse sensor, and subject-independent WESAD evaluation. Future work may add a separately trained temporal model, but an untrained CCT-LSTM would not be scientifically valid or expected to improve this runtime.
+
+<sub>🧪 Research prototype · ⚡ DirectML acceleration · 🎙 Live audio · ❤️ physiological context · 🔒 local IPC</sub>

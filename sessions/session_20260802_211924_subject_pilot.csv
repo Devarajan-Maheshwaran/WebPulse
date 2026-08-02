@@ -1,0 +1,5 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-08-02T21:20:02.888673,38.51,64.63,148.78,0.225,0.0,calm-positive,,Hi there. What's on your mind today?
+2026-08-02T21:20:12.520222,48.15,60.06,278.54,0.466,0.0,calm-positive,I am feeling sad right now.,I'm really sorry to hear that. Would you like to talk about it? Sometimes just sharing can help a little.
+2026-08-02T21:20:50.292563,85.92,66.52,203.26,0.367,0.0,calm-positive,,"I understand you're feeling sad. Even though your body might be showing signs of being active, your feelings are important. Is there anything specific that's making you feel this way?"
+2026-08-02T21:25:23.785062,359.41,66.52,203.26,0.367,0.0,calm-positive,,"It sounds like things are tough right now, even if you're managing to keep going. Is there anything specific that's making you feel this way?"

@@ -1,0 +1,101 @@
+{
+  "session_id": "session_20260802_210621_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-08-02T21:06:21.111475",
+  "duration_seconds": 216.12,
+  "total_records": 4,
+  "records": [
+    {
+      "timestamp_iso": "2026-08-02T21:07:38.846730",
+      "elapsed_seconds": 77.74,
+      "heart_rate_bpm": 70.49,
+      "rmssd_ms": 35.0,
+      "arousal_score": 0.305,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "Hello, I'm here. What would you like to chat about today? Everything alright?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.2,
+        "valence_score_5": 3.0,
+        "hr_score_5": 2.2,
+        "hrv_stress_load_5": 3.9,
+        "signal_quality": "NO_VALID_ROI",
+        "roi_coverage": "0/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:07:50.517329",
+      "elapsed_seconds": 89.41,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 0.0,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "I'm sorry to hear that. Would you like to talk about what's making you feel that way? You don't have to, but sometimes it helps. I'm here to listen.",
+      "raw_signal_summary": {
+        "bio_state_score_5": 3.0,
+        "bio_state_label": "ACTIVE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 3.0,
+        "valence_score_5": 3.0,
+        "hr_score_5": 3.0,
+        "hrv_stress_load_5": 3.0,
+        "signal_quality": "GOOD",
+        "roi_coverage": "0/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:08:52.835812",
+      "elapsed_seconds": 151.72,
+      "heart_rate_bpm": 75.98,
+      "rmssd_ms": 170.65,
+      "arousal_score": 0.423,
+      "valence_score": 0.0,
+      "emotion_label": "calm-positive",
+      "transcript": "",
+      "llm_response": "You're very welcome. I'm here whenever you need to talk. Is anything else on your mind?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.7,
+        "valence_score_5": 3.0,
+        "hr_score_5": 2.5,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "WEAK_SIGNAL",
+        "roi_coverage": "2/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:09:01.547238",
+      "elapsed_seconds": 160.44,
+      "heart_rate_bpm": 75.68,
+      "rmssd_ms": 209.28,
+      "arousal_score": 0.366,
+      "valence_score": 0.36,
+      "emotion_label": "calm-positive",
+      "transcript": "tell how I am feeling right now.",
+      "llm_response": "Well, I can't tell exactly how you're feeling, but a moment ago you said you were sad. Would you say that's still the case, or has something changed?",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 2.5,
+        "valence_score_5": 3.7,
+        "hr_score_5": 2.5,
+        "hrv_stress_load_5": 1.0,
+        "signal_quality": "WEAK_SIGNAL",
+        "roi_coverage": "1/3"
+      }
+    }
+  ]
+}

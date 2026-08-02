@@ -1,0 +1,55 @@
+{
+  "session_id": "session_20260802_210458_subject_pilot",
+  "subject_id": "subject_pilot",
+  "start_time": "2026-08-02T21:04:58.860244",
+  "duration_seconds": 128.29,
+  "total_records": 2,
+  "records": [
+    {
+      "timestamp_iso": "2026-08-02T21:05:26.787820",
+      "elapsed_seconds": 27.93,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 0.0,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "I'm finding it a little hard to hear you. Can you perhaps speak a bit louder or get",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 3.0,
+        "valence_score_5": 3.0,
+        "hr_score_5": 3.0,
+        "hrv_stress_load_5": 3.0,
+        "signal_quality": "WEAK_SIGNAL",
+        "roi_coverage": "0/3"
+      }
+    },
+    {
+      "timestamp_iso": "2026-08-02T21:06:16.045547",
+      "elapsed_seconds": 77.19,
+      "heart_rate_bpm": null,
+      "rmssd_ms": null,
+      "arousal_score": 0.5,
+      "valence_score": 0.0,
+      "emotion_label": "aroused-positive",
+      "transcript": "",
+      "llm_response": "Sorry, I can't really tell what you're pointing at. Could you describe it a bit more? The sensor data isn't helping me much right now.",
+      "raw_signal_summary": {
+        "bio_state_score_5": 0.0,
+        "bio_state_label": "UNAVAILABLE",
+        "wesad_stress_label": "NORMAL",
+        "wesad_stress_score_5": 3.0,
+        "arousal_score_5": 3.0,
+        "valence_score_5": 3.0,
+        "hr_score_5": 3.0,
+        "hrv_stress_load_5": 3.0,
+        "signal_quality": "WEAK_SIGNAL",
+        "roi_coverage": "0/3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+timestamp_iso,elapsed_seconds,heart_rate_bpm,rmssd_ms,arousal_score,valence_score,emotion_label,transcript,llm_response
+2026-08-02T21:07:38.846730,77.74,70.49,35.0,0.305,0.0,calm-positive,,"Hello, I'm here. What would you like to chat about today? Everything alright?"
+2026-08-02T21:07:50.517329,89.41,,,0.5,0.0,aroused-positive,,"I'm sorry to hear that. Would you like to talk about what's making you feel that way? You don't have to, but sometimes it helps. I'm here to listen."
+2026-08-02T21:08:52.835812,151.72,75.98,170.65,0.423,0.0,calm-positive,,You're very welcome. I'm here whenever you need to talk. Is anything else on your mind?
+2026-08-02T21:09:01.547238,160.44,75.68,209.28,0.366,0.36,calm-positive,tell how I am feeling right now.,"Well, I can't tell exactly how you're feeling, but a moment ago you said you were sad. Would you say that's still the case, or has something changed?"
