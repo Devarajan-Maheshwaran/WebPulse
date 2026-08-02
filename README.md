@@ -13,17 +13,22 @@
   <img src="https://img.shields.io/badge/ROI-forehead%20%2B%202%20cheeks-111827" alt="Three facial regions" />
 </p>
 
-WebPulse is a local HCI research prototype that estimates contactless physiology from a webcam and combines it with voice interaction. It processes forehead and bilateral-cheek regions with EfficientPhys, derives HR and HRV, classifies stress using a WESAD-trained model, converts the latest state into bounded 1-to-5 context scores, and provides a spoken Gemini Live companion.
+WebPulse is a local HCI prototype for:
 
-It is a research prototype, not a medical device. It does not diagnose stress, emotion, or health conditions.
+- **Contactless HR/HRV:** estimates pulse and variability from forehead and bilateral-cheek ROIs.
+- **Affective inference:** combines EfficientPhys features with WESAD stress classification.
+- **Gemini Live context:** converts physiology into bounded 1-to-5 scores before interaction.
+- **Local voice loop:** streams microphone audio and plays responses without a separate cloud audio service.
 
-## **Future direction: privacy-preserving federated learning**
+Research prototype only; not a medical device or diagnostic system.
 
-**The next major rework is a federated learning architecture for real-time deployment. The intended design keeps face video, rPPG signals, voice features, and personal biodata on the user's device. Only protected model updates would leave the device through secure aggregation, with optional differential privacy and encrypted transport. This reduces the need to centralize sensitive biometric data and makes the system more suitable for privacy-conscious HCI research and deployment.**
+## **Future direction: federated learning**
 
-**Federated learning would also support collaborative model improvement across devices without collecting raw videos or physiological streams in a central server. Local evaluation, client sampling, aggregation, drift monitoring, and subject-independent validation would be used to improve generalization. Federated learning does not automatically prevent overfitting or underfitting; those risks still require careful data partitioning, regularization, privacy-budget management, and held-out validation.**
-
-**EfficientPhys is used in the current implementation because it fits the available PC hardware and supports practical local inference. With stronger hardware, the architecture can be extended to higher-capacity 3D CNNs, PhysMamba, and other models available through the [rPPG-Toolbox](https://github.com/ubicomplab/rPPG-Toolbox), subject to latency, energy, and privacy evaluation.**
+- **Privacy:** keep face video, rPPG, voice, and biodata on-device instead of uploading raw personal signals.
+- **Deployment:** share protected model updates using secure aggregation, encrypted transport, and optional differential privacy.
+- **Learning:** improve models across clients without centralizing raw biometric data or face videos.
+- **Generalization:** use held-out subjects, drift monitoring, and regularization; FL alone does not prevent overfitting or underfitting.
+- **Hardware path:** EfficientPhys fits the current PC; PhysMamba, 3D CNNs, and other [rPPG-Toolbox](https://github.com/ubicomplab/rPPG-Toolbox) models can follow when hardware allows.
 
 ## Proof of work
 
@@ -104,11 +109,14 @@ The broker carries raw local state. The Live agent converts it into model-facing
 
 The implementation is informed by the following work:
 
-- [rPPG-Toolbox: Deep Remote PPG Toolbox](https://github.com/ubicomplab/rPPG-Toolbox), NeurIPS 2023. This project follows the same research concern for reproducible camera-based physiological sensing, but uses its own EfficientPhys ONNX runtime and ROI pipeline rather than claiming to reproduce the toolbox.
-- [rPPG-Toolbox paper](https://arxiv.org/abs/2210.00716), for benchmark-oriented remote PPG methodology and evaluation framing.
-- [EfficientPhys](https://arxiv.org/abs/2207.04850), for efficient spatio-temporal remote PPG estimation.
-- [WESAD dataset](https://ubicomp.eti.uni-siegen.de/home/datasets/icmi2018/), for stress-related physiological classification.
-- [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714), for arousal-valence representation.
+| Paper or resource | Role in WebPulse |
+|---|---|
+| [Ikeda, Horie, and Sugaya: Estimating Emotion with Biological Information for Robot Interaction](https://doi.org/10.1016/j.procs.2017.08.198) | Motivates mapping biological indices into interaction-facing affect states. |
+| [rPPG-Toolbox: Deep Remote PPG Toolbox](https://github.com/ubicomplab/rPPG-Toolbox) and [paper](https://arxiv.org/abs/2210.00716) | Informs reproducible camera-based physiology, benchmark practice, and evaluation framing. |
+| [EfficientPhys](https://arxiv.org/abs/2207.04850) | Provides the efficient spatio-temporal rPPG model used for the current hardware target. |
+| [WESAD dataset](https://ubicomp.eti.uni-siegen.de/home/datasets/icmi2018/) | Provides the stress-related physiological foundation for the HRV classifier. |
+| [CCT-LSTM](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html) | Supports the future multimodal and temporal-model direction; it is not implemented in this version. |
+| [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714) | Provides the arousal-valence representation used for affect fusion. |
 
 WebPulse does not reproduce CCT-LSTM, claim paper-level benchmark performance, or replace subject-independent evaluation with live screenshots.
 
