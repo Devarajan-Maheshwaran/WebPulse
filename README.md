@@ -107,16 +107,17 @@ The broker carries raw local state. The Live agent converts it into model-facing
 
 ## Research basis
 
-The implementation is informed by the following work:
+The following review connects the research ideas to the implemented MVP:
 
-| Paper or resource | Role in WebPulse |
-|---|---|
-| [Ikeda, Horie, and Sugaya: Estimating Emotion with Biological Information for Robot Interaction](https://doi.org/10.1016/j.procs.2017.08.198) | Motivates mapping biological indices into interaction-facing affect states. |
-| [rPPG-Toolbox: Deep Remote PPG Toolbox](https://github.com/ubicomplab/rPPG-Toolbox) and [paper](https://arxiv.org/abs/2210.00716) | Informs reproducible camera-based physiology, benchmark practice, and evaluation framing. |
-| [EfficientPhys](https://arxiv.org/abs/2207.04850) | Provides the efficient spatio-temporal rPPG model used for the current hardware target. |
-| [WESAD dataset](https://ubicomp.eti.uni-siegen.de/home/datasets/icmi2018/) | Provides the stress-related physiological foundation for the HRV classifier. |
-| [CCT-LSTM](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html) | Supports the future multimodal and temporal-model direction; it is not implemented in this version. |
-| [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714) | Provides the arousal-valence representation used for affect fusion. |
+| Research reference | Review finding | WebPulse implementation and MVP choice |
+|---|---|---|
+| [CCT-LSTM, WACV 2024](https://openaccess.thecvf.com/content/WACV2024/html/Ziaratnia_Multimodal_Deep_Learning_for_Remote_Stress_Estimation_Using_CCT-LSTM_WACV_2024_paper.html) | Multimodal video and physiological branches benefit from temporal modeling. | Uses EfficientPhys, HRV/WESAD, voice valence, and deterministic fusion. Full CCT-LSTM was deferred because it needs more data, training, and hardware. |
+| [CAST-Phys, 2025](https://arxiv.org/html/2507.06080v1) and [Khan et al., 2024](https://link.springer.com/article/10.1007/s00530-024-01302-2) | Contactless multimodal affect sensing remains sensitive to subject, lighting, and modality variation. | Uses explicit ROI quality, signal labels, local voice features, and conservative uncertainty handling rather than claiming generalized emotion recognition. |
+| [Zhou et al., 2023](https://www.sciencedirect.com/science/article/abs/pii/S1046202323001433) and [SympCam, 2025](https://www.themoonlight.io/en/review/sympcam-remote-optical-measurement-of-sympathetic-arousal) | Camera-derived pulse/PRV can support dimensional arousal and sympathetic-state estimation. | Fuses BVP-derived HR/HRV into an arousal score; it is treated as an estimate, not a clinical measurement. |
+| [rPPG-Toolbox](https://github.com/ubicomplab/rPPG-Toolbox) and [paper](https://arxiv.org/abs/2210.00716) | Reproducible rPPG pipelines need defined preprocessing, model evaluation, and dataset discipline. | The ROI and EfficientPhys ONNX path follows this research direction; the MVP uses a lightweight local runtime for the available PC. |
+| [EfficientPhys](https://arxiv.org/abs/2207.04850) | Efficient spatio-temporal rPPG is suitable for resource-constrained inference. | Current deep backend; higher-capacity 3D CNNs and PhysMamba are future hardware-dependent options. |
+| [Suzuki et al., 2021](https://iaiai.org/letters/index.php/liir/article/view/330) and [Nishibe et al., 2025](https://iaiai.org/letters/index.php/liir/article/view/330) | HRV features such as RMSSD can support emotion-related physiological modeling. | Uses RMSSD, HR, WESAD classification, and a bounded 1-to-5 bio-state score rather than a larger feature-selection model. |
+| [Ikeda, Horie, and Sugaya](https://doi.org/10.1016/j.procs.2017.08.198) and [A Circumplex Model of Affect](https://doi.org/10.1037/h0077714) | Biological signals can be mapped into interaction-facing arousal-valence states. | Provides the interaction framing and affect-fusion representation used by the Live companion. |
 
 WebPulse does not reproduce CCT-LSTM, claim paper-level benchmark performance, or replace subject-independent evaluation with live screenshots.
 
